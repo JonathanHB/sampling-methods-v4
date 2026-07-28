@@ -4,7 +4,7 @@ import numpy as np
 #TODO: fill out an entire project worth of function specs and then give them to Claude and see if it can fill them in
 
 
-def multiplot_observable_convergence(conditions_replicate_time, condition_names, timepoints, time_axis_label, true_value):
+def multiplot_observable_convergence(conditions_replicate_time, condition_names, timepoints, time_axis_label, plottitle, true_value):
     """plot observables over time across multiple replicates and conditions
     
     Parameters
@@ -21,6 +21,10 @@ def multiplot_observable_convergence(conditions_replicate_time, condition_names,
     
     time_axis_label: string
         Time axis label. Used to provide units and distinguish aggregate and molecular time.
+        This is the x axis label and need not actually be related to time.
+    
+    plottitle: string
+        what to call the saved plot file
 
     true_values: float
         the true value of the observable
@@ -31,7 +35,32 @@ def multiplot_observable_convergence(conditions_replicate_time, condition_names,
         The purpose of the function is to save a plot
     
     """
-    pass
+
+    fig, ax = plt.subplots(len(conditions_replicate_time), sharex='col', figsize=(5,10))
+
+    #loop over conditions
+    for i, (replicate_time, condition_name) in enumerate(conditions_replicate_time, condition_names):
+
+        #loop over replicas
+        for obs_timeseries in replicate_time:
+
+            #sampled_timepoints = timepoints[np.where(not np.isnan(obs_timeseries))] <not needed?
+
+            ax[i].plot(timepoints, obs_timeseries)
+            ax[i].axhline(true_value, linestyle="dashed", color="black")
+            ax[i].set_xlim(0,max(timepoints))
+
+        ax[i].set_ylabel(condition_name)
+        ax[i].set_ylim(-20,1)
+
+    plt.subplots_adjust(hspace=0.13, wspace=0.1, top=0.6, bottom=0, left=0, right=0.8)
+    plt.xlabel(time_axis_label)
+    #ax[0].set_title("each panel is an average over 10 replicates") < old
+
+    plt.savefig(f"figures/{plottitle}.png", bbox_inches="tight", dpi=600)
+
+    plt.show()
+
 
 
 def run_macrostate_dg_molecular_time(simulator_objects, n_replicates, max_we_rounds, macrostate_classifier):
@@ -71,12 +100,12 @@ def run_macrostate_dg_molecular_time(simulator_objects, n_replicates, max_we_rou
 
     for si, s in enumerate(simulator_objects):
         for ri in range(n_replicates):
-            trj, potentials = s.run(max_we_rounds)
-            fe_by_round = importance_sampling_fe_by_we_round(trj, potentials, macrostate_classifier)
+            trj, discrete_trj, we_weights, potentials, metadata, kB, T, delta_T = s.run(max_we_rounds)
+            fe_by_round = importance_sampling_fe_by_we_round(trj, discrete_trj, we_weights, potentials, metadata, macrostate_classifier, kB, T, delta_T)
             conditions_replicate_time[si,ri] = fe_by_round
 
-
     return conditions_replicate_time, max_we_rounds, "WE rounds"
+
 
 
 def importance_sampling_fe_by_we_round(trj, discrete_trj, we_weights, potentials, metadata, macrostate_classifier, kB, T, delta_T):
@@ -145,8 +174,10 @@ def importance_sampling_fe_by_we_round(trj, discrete_trj, we_weights, potentials
             #if the walker exists
             if metadata_rw: 
 
+                #add trajectory to aggregated data
                 trj_flattened_by_we_round[we_i].append(trj_rw)
 
+                #calculate metadynamics weight
                 potential_along_trj = potentials_rw[disc_trj_rw]
                 exp_factor = np.exp(potential_along_trj/(kB*T))
 
@@ -155,8 +186,9 @@ def importance_sampling_fe_by_we_round(trj, discrete_trj, we_weights, potentials
                 partition_ratio = np.divide(Z1,Z0)
 
                 mtd_weights_rw = np.multiply(exp_factor, partition_ratio)
-                importance_weights_rw = we_weight*mtd_weights_rw
 
+                #calculate importance weights and add them to aggregated data
+                importance_weights_rw = we_weight*mtd_weights_rw
                 importance_weights_flattened_by_we_round[we_i].append(importance_weights_rw)
 
         #combine the data from all walkers from each round
@@ -177,6 +209,7 @@ def importance_sampling_fe_by_we_round(trj, discrete_trj, we_weights, potentials
         # we_weights_r = we_weights_r[metadata_r==1]
 
     return delta_G
+
 
 
 def importance_sampling_estimator(coords, importance_weights, observable):
@@ -211,3 +244,26 @@ def importance_sampling_estimator(coords, importance_weights, observable):
     observable_estimate = np.multiply(observable_values, importance_weights)/np.sum(importance_weights)
 
     return observable_estimate
+
+
+
+def dummy_macrostate_classifier(coords):
+    """
+    Give each datapoint a binary macrostate assignment. 
+
+    Parameters
+    ----------
+    coordinates: 2d numpy array of floats 
+        of shape (n_datapoints, n_dimensions)
+        the microscopic coordinates of each frame
+
+    Returns
+    -------
+    macrostate: int
+        1 for points with a negative first coordinate, 0 otherwise.
+
+    """
+
+    macrostates = np.where(coords[:,0]<0, 1, 0)
+
+    return macrostates
