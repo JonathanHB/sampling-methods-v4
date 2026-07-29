@@ -1,7 +1,56 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import simulator_classes
+import set_params
 
 #TODO: fill out an entire project worth of function specs and then give them to Claude and see if it can fill them in
+
+#global variable
+kB=1
+
+
+def multiplot_main_variable_WE():
+    """TODO: write me!"""
+
+    #specify system
+    system = "TODO: make systems.py class"
+
+    #general parameters
+    n_replicates = 3
+    T=1
+
+    #WE parameters
+    max_we_rounds = 100
+    we_intervals = [i for i in range(100,500,50)]
+    walkers_per_bin = 6
+    n_we_bins = 100
+
+    #MTD parameters
+    #TODO look at the original well-tempered MTD paper and what it says about how to set parameters
+    mtd_params = set_params.set_from_unbiased_literature_advice(system)
+
+    #for the time being stick with 1D CVs
+
+
+
+
+
+    #initialize systems
+    simulator_objects = []
+    for wei in we_intervals:
+        simulator_objects.append(simulator_classes.we_mtd_simulator)
+
+    #run simulation
+    conditions_replicate_time, max_we_rounds, time_axis_label = run_macrostate_dg_molecular_time(simulator_objects, n_replicates, max_we_rounds, system.macrostate_classifier)
+
+    #plot results
+    multiplot_observable_convergence(conditions_replicate_time, 
+                                     condition_names = [f"t_WE = {wei}" for wei in we_intervals], 
+                                     timepoints = [wer for wer in range(max_we_rounds)], 
+                                     time_axis_label = "WE round", 
+                                     plottitle = "Macrostate delta G for variable WE interval", 
+                                     true_value = system.true_macrostate_dg)
+
 
 
 def multiplot_observable_convergence(conditions_replicate_time, condition_names, timepoints, time_axis_label, plottitle, true_value):
@@ -107,7 +156,8 @@ def run_macrostate_dg_molecular_time(simulator_objects, n_replicates, max_we_rou
     return conditions_replicate_time, max_we_rounds, "WE rounds"
 
 
-
+#TODO write a variant of this that works by actual time stamp instead of WE round
+#since WE round spacing may vary
 def importance_sampling_fe_by_we_round(trj, discrete_trj, we_weights, potentials, metadata, macrostate_classifier, kB, T, delta_T):
     """
     Calculate the importance sampling estimate of a macrostate free energy difference 
@@ -177,6 +227,7 @@ def importance_sampling_fe_by_we_round(trj, discrete_trj, we_weights, potentials
                 #add trajectory to aggregated data
                 trj_flattened_by_we_round[we_i].append(trj_rw)
 
+                #TODO: make metadynamics weight calculation into its own function
                 #calculate metadynamics weight
                 potential_along_trj = potentials_rw[disc_trj_rw]
                 exp_factor = np.exp(potential_along_trj/(kB*T))
