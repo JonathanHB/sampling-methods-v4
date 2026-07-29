@@ -18,6 +18,8 @@ import MSM_methods
 ###################################################################################################
 #                                      MERGING AND SPLITTING
 
+#TODO: this function seems too long; can it be refactored?
+
 #split and merge walkers to ensure that each bin has the target number of walkers
 #parameters
 # w = walker weights
@@ -99,6 +101,8 @@ def split_merge(w, b, walkerdata_transposed, walkers_per_bin):
             local_indset = [i for i in indset]
             w_local_indset = [w[i] for i in indset]
 
+            #TODO: why does this need to be done with a loop instead of choosing multiple things without replacement? 
+            # Does it have to do with the weighting function used to determine what to remove?
             #remove walkers until only walkers_per_bin remain
             for i in range(len(indset)-walkers_per_bin):
                 
