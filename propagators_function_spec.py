@@ -40,7 +40,7 @@ def propagate(G: Callable[[np.ndarray], np.ndarray],
         The first axis is the simulation, the second is the dimension. 
         The initial coordinates of each simulation. 
 
-    init_potentials: (1+n_cv)d numpy array of floats
+    init_potential_grids: (1+n_cv)d numpy array of floats
         of length n_parallel_walkers along the first dimension. 
         The initial metadynamics potential of each walker.
 
@@ -82,7 +82,8 @@ def propagate(G: Callable[[np.ndarray], np.ndarray],
     trajectories: 3d numpy array of floats
         of shape (n_parallel_simulations, n_gaussians*n_steps_per_gaussian, n_dimensions). 
         The simulation trajectories
-    potentials: (2+n_cv)d numpy array of floats
+        
+    potential_grids: (2+n_cv)d numpy array of floats
         The first two dimensions are the parallel walkers and the gaussian index respectively
         Record the metadynamics potential of each walkers after each gaussian deposition
 
