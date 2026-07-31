@@ -1,31 +1,19 @@
 
-#parameters
-#   trj_coords: list of floats: initial coordinates of the trajectories on the progress coordinate
-#   F: function of a float returning a float: 
-#      the negative derivative of free energy function with respect to the progress coordinate as a function of the progress coordinate
-#   D: float: brownian diffusion coefficient
-#   kT: float: Boltzmann's constant times the temperature
-#   timestep: float: the size of the timestep used for propagation
-#   nsteps: nonnegative int: how many time steps to propagate for
+"""
+To do list
 
-#returns
-#   trj_out: list of arrays: the coordinates of the trajectories at each time step
-#      trj_out has size [nsteps//save_period, trj_coords.shape[0], trj_coords.shape[1]]
+1. make a system object containing a potential, coordinate limits, and a diffusion coefficient, a macrostate classifier, and a macrostate free energy difference calculator
+2. make a CV object containing a CV, CV gradient, and cv limits
+2.5. update tests
+2.6. clean up repo
+3. write updated WE code
+    manually clean and review current code
+    feed cleaned code to claude and ask it to check it; also upload huber and kim 1996 
+4. make a metadynamics wrapper function matching the WE propagator requirements
+5. make simulation system object (and decide if this actually makes sense)
+6. write function to set MTD parameters based on the existing one in msm_toy_systems/
+    implement binless diffusion coefficient calculation and see if it matches MSM
+7. assemble all of this in main and test it
 
-#Brownian diffusion
-#nsteps must be an integer multiple of save_period
-def propagate(system, kT, trj_coords, timestep, nsegs, save_period):
-  
-    nd = np.array(trj_coords.shape) #actually the number of walkers times the number of dimensions   
-    D = system.diffusion_coefficient
-    
-    trj_out = np.zeros((nsegs, trj_coords.shape[0], trj_coords.shape[1]))
-    for i in range(nsegs):
-    
-        for step in range(save_period):
-            trj_coords += D/kT * system.F(trj_coords) * timestep + np.sqrt(2*D*timestep)*np.random.normal(size=nd)
+"""
 
-        trj_out[i] = trj_coords
-        #trj_out.append(trj_coords.copy())
-
-    return trj_out

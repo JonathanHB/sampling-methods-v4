@@ -42,6 +42,7 @@ def propagate(G: Callable[[np.ndarray], np.ndarray],
 
     init_potential_grids: (1+n_cv)d numpy array of floats
         of length n_parallel_walkers along the first dimension. 
+        Each element is the initial metadynamics potential of a given walker at a given CV
         The initial metadynamics potential of each walker.
 
     steps_per_saved_frame: int
@@ -84,7 +85,8 @@ def propagate(G: Callable[[np.ndarray], np.ndarray],
         The simulation trajectories
         
     potential_grids: (2+n_cv)d numpy array of floats
-        The first two dimensions are the parallel walkers and the gaussian index respectively
+        The first two dimensions are the parallel walkers and the time (in increments of 1 gaussian deposition) respectively
+        Each element is the total metadynamics potential of a given walker after the deposition of a given number of gaussians at a given CV
         Record the metadynamics potential of each walkers after each gaussian deposition
 
     

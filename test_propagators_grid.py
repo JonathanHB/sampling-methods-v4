@@ -1,5 +1,5 @@
 import numpy as np
-from energy_landscapes import free_energy_on_cv_grid
+from draft.old_energy_landscapes import free_energy_on_cv_grid
 from propagators_grid import propagate
 import matplotlib.pyplot as plt
 

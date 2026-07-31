@@ -4,10 +4,12 @@ from typing import Callable
 
 
 #written by claude sonnet 5 at medium effort on 7/29/26
-#
+#a version of propagators_function_spec.py was uploaded with the prompt
+
 def propagate(G: Callable[[np.ndarray], np.ndarray],
               kT: float,
               dt: float,
+              xi: int,
               init_coords: np.ndarray,
               init_potentials: np.ndarray,
               steps_per_saved_frame: int,
@@ -50,6 +52,9 @@ def propagate(G: Callable[[np.ndarray], np.ndarray],
 
     dt: float
         The simulation timestep
+
+    xi: float
+        The friction coefficient
 
     init_coords: 2d numpy array of floats
         of shape (n_parallel_simulations, n_dimensions).
@@ -113,7 +118,7 @@ def propagate(G: Callable[[np.ndarray], np.ndarray],
         
     potentials: (2+n_cv)d numpy array of floats
         of shape (n_parallel_simulations, n_gaussians, N_1, ..., N_n_cv).
-        The first two dimensions are the parallel walkers and the gaussian index respectively;
+        The first two dimensions are the parallel walkers and the time (in increments of 1 gaussian deposition) respectively;
         the remaining n_cv dimensions are the bias grid. Records a snapshot of each walker's
         full bias grid after each gaussian deposition.
     """
@@ -152,7 +157,8 @@ def propagate(G: Callable[[np.ndarray], np.ndarray],
 
     coords = init_coords.copy()
     rng = np.random.default_rng()
-    sqrt_2kT_dt = np.sqrt(2.0 * kT * dt)
+    dt_over_xi = dt / xi
+    sqrt_2kT_dt_over_xi = np.sqrt(2.0 * kT * dt / xi)
 
     fd_eps = 1e-6
 
@@ -236,7 +242,7 @@ def propagate(G: Callable[[np.ndarray], np.ndarray],
                 force = -(dGdx + dVdx)
 
                 noise = rng.standard_normal(size=coords.shape)
-                coords = coords + force * dt + sqrt_2kT_dt * noise
+                coords = coords + force * dt_over_xi + sqrt_2kT_dt_over_xi * noise
 
             trajectories[:, frame_idx, :] = coords
             frame_idx += 1

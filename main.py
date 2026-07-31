@@ -4,7 +4,7 @@ import simulator_classes
 import set_params
 import estimate_observables
 import make_figures
-import energy_landscapes
+import draft.old_energy_landscapes as old_energy_landscapes
 
 #TODO: fill out an entire project worth of function specs and then give them to Claude and see if it can fill them in
 
@@ -32,7 +32,7 @@ def multiplot_main_variable_WE():
     """
 
     #specify system
-    simulation_system = energy_landscapes.unit_double_well()
+    simulation_system = old_energy_landscapes.unit_double_well()
 
     #general parameters
     n_replicates = 3
