@@ -54,7 +54,7 @@ def propagate(G: Callable[[np.ndarray], np.ndarray],
         The simulation timestep
 
     xi: float
-        The friction coefficient
+        The friction coefficient. This merely rescales the timestep
 
     init_coords: 2d numpy array of floats
         of shape (n_parallel_simulations, n_dimensions).

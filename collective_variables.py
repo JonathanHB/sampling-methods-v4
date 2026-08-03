@@ -19,6 +19,8 @@ class collective_variable:
         self.grid_n = grid_n
 
 
+#1D CV
+
 def CV_coord0(x):
     return x[:, :1]
 
@@ -35,5 +37,28 @@ cv_coord0_2d_coord_1d_cv = collective_variable(
     cv_grad_funct= grad_CV_coord0,
     cv_min=np.array([-3.0]),
     cv_max=np.array([3.0]),
+    grid_n = 81
+)
+
+
+#2D CV
+
+def CV_coord01(x):
+    return x[:, :2]
+
+def grad_CV_coord01(x):
+    n = x.shape[0]
+    n_dim = x.shape[1]
+    n_cv2 = 2
+    out = np.zeros((n, n_cv2, n_dim))
+    out[:, 0, 0] = 1.0
+    out[:, 1, 1] = 1.0
+    return out
+
+cv_coord01_2d_coord_2d_cv = collective_variable(
+    cv_funct = CV_coord01,
+    cv_grad_funct= grad_CV_coord01,
+    cv_min=np.array([-3.0, -3.0]),
+    cv_max=np.array([3.0, 3.0]),
     grid_n = 81
 )
