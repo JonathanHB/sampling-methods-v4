@@ -261,8 +261,8 @@ def propagate(G: Callable[[np.ndarray], np.ndarray],
             #|-----> added by JHB on 8/3/26 to compute MTD importance weights for each walker at each saved frame
             V_current, _, _ = bias_value_and_grad(coords, fields) #not terribly efficient to recompute this, but it's only done once per saved frame, not every MD step
 
-            Z0 = np.sum(np.exp(V_grid*(1/T + 1/delta_T)/kB), axis=tuple(range(1, potentials.ndim)))
-            Z1 = np.sum(np.exp(V_grid*(1/delta_T)/kB), axis=tuple(range(1, potentials.ndim)))
+            Z0 = np.sum(np.exp(V_grid*(1/T + 1/delta_T)/kB), axis=tuple(range(1, V_grid.ndim)))
+            Z1 = np.sum(np.exp(V_grid*(1/delta_T)/kB), axis=tuple(range(1, V_grid.ndim)))
             partition_ratio = np.divide(Z1,Z0)
 
             exp_factor = np.exp(V_current/(kB*T))

@@ -47,7 +47,6 @@ class we_mtd_simulator:
             The macrostate classifier object
         """
 
-
         self.kB = kB
         self.T = T
         self.we_params = we_params
@@ -93,10 +92,10 @@ class we_mtd_simulator:
         """
 
         #initialize instances of classes
-        config_binner = weighted_ensemble_v2.config_binner_1(np.linspace(self.energy_landscape.coord_min[0], self.energy_landscape.coord_max[0], self.we_params['n_we_bins']+1))
+        config_binner = weighted_ensemble_v2.config_binner_1(np.linspace(self.energy_landscape.coord_min[0], self.energy_landscape.coord_max[0], self.we_params['n_we_bins']+1), self.we_params['CV'])
         ensemble_classifier = weighted_ensemble_v2.ensemble_classifier_1(self.we_params['macrostate_classifier'])
         binner = weighted_ensemble_v2.binner_1()
-        propagator0 = weighted_ensemble_v2.we_propagator_2(self.energy_landscape, self.T*self.kB, self.mtd_params, self.we_params['n_gaussians_per_round'])
+        propagator0 = weighted_ensemble_v2.we_propagator_2(self.energy_landscape, self.kB, self.T, self.mtd_params, self.we_params['n_gaussians_per_round'])
 
         #initial state
         x = -np.ones((self.we_params['walkers_per_bin'], self.energy_landscape.n_dim))
@@ -110,9 +109,27 @@ class we_mtd_simulator:
         b = binner.bin(cb, e)
         #prop_out_0 = [1 for element in range(walkers_per_bin)]
 
-        trj, discrete_trj, we_weights, potentials, metadata = weighted_ensemble_v2.weighted_ensemble_trjout(x, e, w, cb, b, propagator0, weighted_ensemble_v2.split_merge, config_binner, ensemble_classifier, binner, n_we_rounds, self.we_params['walkers_per_bin'])
+        # print(x)
+        # print(x.shape)
+        # print(w)
+        # print(w.shape)
+        # print(e)
+        # print(e.shape)
+        # print(cb)
+        # print(cb.shape)
+        # print(b)
+        # print(b.shape)
 
-        return trj, discrete_trj, we_weights, potentials, metadata
+        x, e, w, cb, b, propagator, observables = weighted_ensemble_v2.weighted_ensemble(x, e, w, cb, b, propagator0, weighted_ensemble_v2.split_merge, config_binner, ensemble_classifier, binner, weighted_ensemble_v2.calc_observables_2, n_we_rounds, self.we_params['walkers_per_bin'])
+
+        #effectively transpose the list of lists so the first axis is observable type rather than time
+        #but without the data type/structure requirement of a numpy array
+        observables_over_time = [list(row) for row in zip(*observables)]
+
+        # print("obs lengths 2")
+        # print([len(lw) for lw in observables_over_time])
+        return observables_over_time
+
 
         #for r_we in range(n_we_rounds):
         #    x, e, w, cb, b, propagator, new_observables = weighted_ensemble_v2.weighted_ensemble_trjout(x, e, w, cb, b, propagator0, weighted_ensemble_v2.split_merge, config_binner, ensemble_classifier, binner, n_we_rounds, self.we_params['walkers_per_bin'])

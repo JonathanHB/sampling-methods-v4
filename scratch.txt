@@ -10,7 +10,7 @@ To do list
 3. write updated WE code
     manually clean and review current code
     feed cleaned code to claude and ask it to check it; also upload huber and kim 1996 
-4. make a metadynamics wrapper function matching the WE propagator requirements
+4. make a metadynamics wrapper function matching the WE propagator requirements (this is just a WE propagator object)
 5. make simulation system object (and decide if this actually makes sense) w/ macrostate classifier (or make the classifier its own thing with the CV?)
 6. write function to set MTD parameters based on the existing one in msm_toy_systems/
     implement binless diffusion coefficient calculation and see if it matches MSM

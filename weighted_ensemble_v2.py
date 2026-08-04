@@ -11,9 +11,9 @@ from collections import Counter
 import matplotlib.pyplot as plt
 
 from propagators_grid import propagate
-import propagators_v1
-import utility_v1
-import MSM_methods
+# import propagators_v1
+# import utility_v1
+# import MSM_methods
 
 
 ###################################################################################################
@@ -286,9 +286,10 @@ class we_propagator_1():
 
 class we_propagator_2():
     
-    def __init__(self, simulated_system, kT, mtd_params, n_gaussians_per_round):
+    def __init__(self, simulated_system, kB, T, mtd_params, n_gaussians_per_round):
         self.system = simulated_system
-        self.kT = kT
+        self.kB = kB
+        self.T = T
         self.mtd_params = mtd_params
         self.n_gaussians_per_round = n_gaussians_per_round
         self.CV = mtd_params["CV"] #to simplify referencing
@@ -298,7 +299,7 @@ class we_propagator_2():
         init_potentials = np.zeros((len(x), self.CV.grid_n))
 
         traj, pots, weights = propagate(
-            G=self.system.G, kT=self.kT, dt=self.mtd_params["dt"], xi = self.system.xi, 
+            G=self.system.G, kB=self.kB, T = self.T, dt=self.mtd_params["dt"], xi = self.system.xi, 
             init_coords=x, init_potentials=init_potentials, 
             steps_per_saved_frame=self.mtd_params["n_steps_per_frame"],
             n_gaussians=self.n_gaussians_per_round, 
@@ -324,13 +325,14 @@ class we_propagator_2():
 # and having this as its own method provides a modular way to implement such schemes 
 class config_binner_1():
     
-    def __init__(self, binbounds):
+    def __init__(self, binbounds, CV):
         self.binbounds = binbounds
         self.n_bins = len(binbounds)+1
+        self.CV = CV
         # self.n_bins = np.product([len(bbd)+1 for bbd in binbounds])
     
     def bin(self, x):
-        return np.digitize(x, self.binbounds).flatten()
+        return np.digitize(self.CV.cv_funct(x), self.binbounds).flatten()
         #utility_v1.binner_1d(self.binbounds, x)
     
 
@@ -393,7 +395,11 @@ def calc_observables_1(x_last, x, e_last, e, w, cb_last, cb, b_last, b, propagat
 
 
 def calc_observables_2(x_last, x, e_last, e, w, cb_last, cb, b_last, b, propagator, mtd_data):
-    return mtd_data 
+    #note that x is not returned here because mtd_data has the trajectories at better time resolution
+    #specifically x is the final coordinates of each walker after the WE round, while mtd_data[0] contains the coordinates of each walker at every saved frame during the WE round
+    return mtd_data[0], mtd_data[2], np.array(w)
+
+
 
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 #TODO: separate the code above and below this point into separate files, analogous to how metadynamics is structured

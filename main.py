@@ -10,7 +10,7 @@ import collective_variables
 #TODO: fill out an entire project worth of function specs and then give them to Claude and see if it can fill them in
 
 #global variable
-kB=1
+#kB=1
 
 
 def multiplot_main_variable_WE():
@@ -42,13 +42,13 @@ def multiplot_main_variable_WE():
     dt=0.01
 
     #WE parameters
-    max_we_rounds = 100
-    we_intervals = list(range(100,500,50))
+    max_we_rounds = 10
+    we_intervals = list(range(20,101,20))
     walkers_per_bin = 6
-    n_we_bins = 100
+    n_we_bins = 50
 
     #MTD parameters
-    n_steps_per_frame = 100
+    n_steps_per_frame = 10
 
     #for the time being stick with 1D CVs
     #used for both WE and MTD, but in principle they could use different CVs
@@ -65,7 +65,7 @@ def multiplot_main_variable_WE():
 
     #dummy macrostate classifier
     def macrostate_classifier(coords):
-        return coords[:,0] > 0.0
+        return np.where(coords[:,0] > 0.0, 1, 0)
 
     #initialize systems
     simulator_objects = []
@@ -74,10 +74,10 @@ def multiplot_main_variable_WE():
                      'n_we_bins': n_we_bins, 
                      'n_gaussians_per_round': n_gaussians_per_round, 
                      'CV': CV, 'macrostate_classifier': macrostate_classifier}
-        simulator_objects.append(simulator_classes.we_mtd_simulator(kB, T, we_params, mtd_params))
+        simulator_objects.append(simulator_classes.we_mtd_simulator(kB, T, we_params, mtd_params, simulation_system))
 
     #run simulations and calculate observable
-    conditions_replicate_time, max_we_rounds, time_axis_label = run_macrostate_dg_molecular_time(
+    conditions_replicate_time, timepoints, max_we_rounds, time_axis_label = run_macrostate_dg_molecular_time(
                     simulator_objects, 
                     n_replicates, 
                     max_we_rounds, 
@@ -86,10 +86,10 @@ def multiplot_main_variable_WE():
     #plot results
     make_figures.multiplot_observable_convergence(observables_all_crt = conditions_replicate_time, 
                     condition_names = [f"ng_WE = {n_gaussians_per_round}" for n_gaussians_per_round in we_intervals], 
-                    timepoints_all_crt = [wer for wer in range(max_we_rounds)], 
+                    timepoints_all_crt = timepoints, 
                     time_axis_label = "WE round", 
                     plottitle = "Macrostate delta G for variable WE interval", 
-                    true_value = simulation_system.true_macrostate_dg)
+                    true_value = 0)
 
 
 
@@ -129,12 +129,20 @@ def run_macrostate_dg_molecular_time(simulator_objects, n_replicates, max_we_rou
     """
 
     observables_all_crt = np.nan*np.ones([len(simulator_objects), n_replicates, max_we_rounds])
+    timepoints = np.nan*np.ones([len(simulator_objects), n_replicates, max_we_rounds])
 
     for si, s in enumerate(simulator_objects):
+        print(f"running condition {si+1} of {len(simulator_objects)}")
         for ri in range(n_replicates):
-            trj, discrete_trj, we_weights, potentials, metadata = s.run(max_we_rounds)
-            fe_by_round = estimate_observables.importance_sampling_fe_by_we_round(trj, discrete_trj, we_weights, potentials, metadata, macrostate_classifier, s.kB, s.T, s.delta_T)
+            print(f"running replicate {ri+1} of {n_replicates}")
+
+            we_observables = s.run(max_we_rounds)
+            # print("obs lengths")
+            # print([len(w) for w in we_observables])
+            #trj, mtd_weights, we_weights, macrostate_classifier
+            fe_by_round = estimate_observables.importance_sampling_fe_by_we_round(we_observables[0], we_observables[1], we_observables[2], macrostate_classifier)
             observables_all_crt[si,ri] = fe_by_round
+            timepoints[si,ri] = [wer for wer in range(max_we_rounds)]
 
 
-    return observables_all_crt, max_we_rounds, "WE rounds"
+    return observables_all_crt, timepoints, max_we_rounds, "WE rounds"

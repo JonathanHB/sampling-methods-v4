@@ -165,46 +165,35 @@ def calc_MTD_importance_weights(potentials, discrete_trajectory, kB, T, delta_T)
 
 #TODO write a variant of this that works by actual time stamp instead of WE round
 #since WE round spacing may vary
-def importance_sampling_fe_by_we_round(trj, discrete_trj, we_weights, potentials, metadata, macrostate_classifier, kB, T, delta_T):
+def importance_sampling_fe_by_we_round(trj, mtd_weights, we_weights, macrostate_classifier):
     """
     Calculate the importance sampling estimate of a macrostate free energy difference 
     via the importance sampling estimate of equilibrium populations.
 
     Parameters
     ----------
-    trj: 4d numpy array of floats
-        of shape (n_we_rounds, max_n_walkers, n_frames_per_we_round, n_coordinates)
-        Each element is a coordinate. NaN values denote walkers which did not exist 
-        (i.e. not all bins were filled at the start of the round so less than the maximum number of walkers were spawned)
+    trj: list of 3d numpy arrays of floats
+        The list is of length n_we_rounds
+        Each entry is an array of shape (n_walkers, n_frames_per_we_round, n_dimensions)
+        Each element is a coordinate. 
 
-    discrete_trj: 4d numpy array of ints
-        of shape (n_we_rounds, max_n_walkers, n_frames_per_we_round, n_coordinates)
-        Each element is an MTD grid index along one axis. NaN values are distributed as above.
-        This is the discrete version of trj
+    mtd_weights: list of 2d numpy arrays of floats
+        Each array is of shape (n_walkers, n_frames_per_we_round)
+        The MTD importance weights for each walker at each saved frame.
 
-    we_weights: 2d numpy array of floats
-        of shape (n_we_rounds, max_n_walkers)
-        Each element is the WE weight of a walker. NaNs as above
-
-    potentials: (3+n_CV_dimensions)d numpy array of floats
-        of shape (n_we_rounds, max_n_walkers, n_frames_per_we_round, [MTD grid dimensions])
-        Each element is an MTD potential value at a specific walker, time, and place
-        NaN values are distributed as above.
-        Because the MTD potential is not usually updated for every saved frame, this contains some redundant information
-
-    metadata: 2d numpy array of ints
-        of shape (n_we_rounds, max_n_walkers)
-        Each element is 1 if the walker was spawned, 0 otherwise. This should match the NaNs in the above two parameters.
-    
+    we_weights: list of 1d numpy arrays of floats
+        Each array is of shape (n_walkers)
+        Each element is the WE weight of a walker
+ 
     macrostate_classifier: numpy array of floats of shape (n_datapoints, n_dimensions) : numpy array of floats of shape (n_datapoints)
         returns 1 for each datapoint which is in the macrostate and 0 for the rest
 
-    kB: float
-        Boltzmann's constant 
-    T: float
-        Temperature
-    delta_T: float
-        The well-tempered metadynamics temperature factor
+    # kB: float
+    #     Boltzmann's constant 
+    # T: float
+    #     Temperature
+    # delta_T: float
+    #     The well-tempered metadynamics temperature factor
 
     Returns
     -------
@@ -228,32 +217,36 @@ def importance_sampling_fe_by_we_round(trj, discrete_trj, we_weights, potentials
     # i.e. sub-arrays here have more suffix letters and sub-arrays in multiplot_observable_convergence() have fewer
 
     #loop over WE rounds
-    for we_i, (trj_r, disc_trj_r, we_weights_r, potentials_r, metadata_r) in enumerate(zip(trj, discrete_trj, we_weights, potentials, metadata)):
+    for we_i, (trj_r, mtd_weights_r, we_weights_r) in enumerate(zip(trj, mtd_weights, we_weights)):
 
-        #loop over walkers
-        for trj_rw, disc_trj_rw, we_weight, potentials_rw, metadata_rw in zip(trj_r, disc_trj_r, we_weights_r, potentials_r, metadata_r):
+        #print(we_weights_r)
 
-            #if the walker exists
-            if metadata_rw: 
+        trj_flattened_by_we_round[we_i] = trj_r.reshape(-1, trj_r.shape[-1])
+        importance_weights_flattened_by_we_round[we_i] = np.multiply(mtd_weights_r, we_weights_r[:, np.newaxis]).flatten()
 
-                #add trajectory to aggregated data
-                trj_flattened_by_we_round[we_i].append(trj_rw)
+        # #loop over walkers
+        # for trj_rw, disc_trj_rw, we_weight, potentials_rw, metadata_rw in zip(trj_r, disc_trj_r, we_weights_r, potentials_r, metadata_r):
 
+        #     #if the walker exists
+        #     if metadata_rw: 
 
-                # mtd_weights_rw = np.multiply(exp_factor, partition_ratio)
-                mtd_weights_rw = calc_MTD_importance_weights(potentials_rw, disc_trj_rw, kB, T, delta_T)
+        #         #add trajectory to aggregated data
+        #         trj_flattened_by_we_round[we_i].append(trj_rw)
 
-                #calculate importance weights and add them to aggregated data
-                importance_weights_rw = we_weight*mtd_weights_rw
-                importance_weights_flattened_by_we_round[we_i].append(importance_weights_rw)
+        #         # mtd_weights_rw = np.multiply(exp_factor, partition_ratio)
+        #         mtd_weights_rw = calc_MTD_importance_weights(potentials_rw, disc_trj_rw, kB, T, delta_T)
 
-        #combine the data from all walkers from each round
-        trj_flattened_by_we_round[we_i] = np.concatenate(trj_flattened_by_we_round[we_i])
-        importance_weights_flattened_by_we_round[we_i] = np.concatenate(importance_weights_flattened_by_we_round[we_i])
+        #         #calculate importance weights and add them to aggregated data
+        #         importance_weights_rw = we_weight*mtd_weights_rw
+        #         importance_weights_flattened_by_we_round[we_i].append(importance_weights_rw)
+
+        # #combine the data from all walkers from each round
+        # trj_flattened_by_we_round[we_i] = np.concatenate(trj_flattened_by_we_round[we_i])
+        # importance_weights_flattened_by_we_round[we_i] = np.concatenate(importance_weights_flattened_by_we_round[we_i])
 
         #calculate the cumulative deltaG up to this point
-        coords_cumulative = np.concatenate(trj_flattened_by_we_round[:we_i])
-        importance_weights_cumulative = np.concatenate(importance_weights_flattened_by_we_round[:we_i])
+        coords_cumulative = np.concatenate(trj_flattened_by_we_round[:we_i+1])
+        importance_weights_cumulative = np.concatenate(importance_weights_flattened_by_we_round[:we_i+1])
         pop_state_A = importance_sampling_estimator(coords_cumulative, importance_weights_cumulative, macrostate_classifier)
 
         delta_G[we_i] = -np.log((1-pop_state_A)/pop_state_A)
@@ -291,7 +284,7 @@ def importance_sampling_estimator(coords, importance_weights, observable):
 
     observable_values = observable(coords)
 
-    observable_estimate = np.multiply(observable_values, importance_weights)/np.sum(importance_weights)
+    observable_estimate = np.dot(observable_values, importance_weights)/np.sum(importance_weights)
 
     return observable_estimate
 
