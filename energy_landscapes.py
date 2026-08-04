@@ -22,7 +22,7 @@ class energy_landscape():
 
 
 def G_2w_2d_diag(x):
-    return 0.5*(x[:, 0]**2 + x[:, 1]**2)**2 + (x[:,0]*x[:,1])*10
+    return 0.5*(x[:, 0]**2 + x[:, 1]**2)**2 - (x[:,0]*x[:,1])*10
 
 diagonal_2well_2d_system = energy_landscape(
     G = G_2w_2d_diag,

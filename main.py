@@ -4,7 +4,8 @@ import simulator_classes
 import set_params
 import estimate_observables
 import make_figures
-import draft.old_energy_landscapes as old_energy_landscapes
+import energy_landscapes
+import collective_variables
 
 #TODO: fill out an entire project worth of function specs and then give them to Claude and see if it can fill them in
 
@@ -32,11 +33,13 @@ def multiplot_main_variable_WE():
     """
 
     #specify system
-    simulation_system = old_energy_landscapes.unit_double_well()
+    simulation_system = energy_landscapes.diagonal_2well_2d_system
 
     #general parameters
     n_replicates = 3
+    kB = 1
     T=1
+    dt=0.01
 
     #WE parameters
     max_we_rounds = 100
@@ -44,35 +47,49 @@ def multiplot_main_variable_WE():
     walkers_per_bin = 6
     n_we_bins = 100
 
-    CV = "some kind of collective variable object"
+    #MTD parameters
+    n_steps_per_frame = 100
+
+    #for the time being stick with 1D CVs
+    #used for both WE and MTD, but in principle they could use different CVs
+    CV = collective_variables.cv_coord0_2d_coord_1d_cv
 
     #MTD parameters
     #TODO look at the original well-tempered MTD paper and what it says about how to set parameters, specifically delta T
-    mtd_params = set_params.set_mtd_params_from_unbiased_literature_advice(simulation_system, T, CV)
+    delta_T, sigma, omega, n_frames_per_gaussian = set_params.set_mtd_params_from_unbiased_literature_advice(simulation_system, T, CV, dt, n_steps_per_frame)
+    mtd_params = {'dt': dt, 
+                  'n_steps_per_frame': n_steps_per_frame, 
+                  'n_frames_per_gaussian': n_frames_per_gaussian, 
+                  'delta_T': delta_T, 'sigma': sigma, 'omega': omega, 
+                  'CV': CV}
 
-    #for the time being stick with 1D CVs
-
+    #dummy macrostate classifier
+    def macrostate_classifier(coords):
+        return coords[:,0] > 0.0
 
     #initialize systems
     simulator_objects = []
-    for wei in we_intervals:
-        we_params = (walkers_per_bin, n_we_bins, wei, CV)
-        simulator_objects.append(simulator_classes.we_mtd_simulator(wei, T, we_params, mtd_params))
+    for n_gaussians_per_round in we_intervals:
+        we_params = {'walkers_per_bin': walkers_per_bin, 
+                     'n_we_bins': n_we_bins, 
+                     'n_gaussians_per_round': n_gaussians_per_round, 
+                     'CV': CV, 'macrostate_classifier': macrostate_classifier}
+        simulator_objects.append(simulator_classes.we_mtd_simulator(kB, T, we_params, mtd_params))
 
-    #run simulation
+    #run simulations and calculate observable
     conditions_replicate_time, max_we_rounds, time_axis_label = run_macrostate_dg_molecular_time(
-        simulator_objects, 
-        n_replicates, 
-        max_we_rounds, 
-        simulation_system.macrostate_classifier)
+                    simulator_objects, 
+                    n_replicates, 
+                    max_we_rounds, 
+                    macrostate_classifier)
 
     #plot results
     make_figures.multiplot_observable_convergence(observables_all_crt = conditions_replicate_time, 
-                                     condition_names = [f"t_WE = {wei}" for wei in we_intervals], 
-                                     timepoints_all_crt = [wer for wer in range(max_we_rounds)], 
-                                     time_axis_label = "WE round", 
-                                     plottitle = "Macrostate delta G for variable WE interval", 
-                                     true_value = simulation_system.true_macrostate_dg)
+                    condition_names = [f"ng_WE = {n_gaussians_per_round}" for n_gaussians_per_round in we_intervals], 
+                    timepoints_all_crt = [wer for wer in range(max_we_rounds)], 
+                    time_axis_label = "WE round", 
+                    plottitle = "Macrostate delta G for variable WE interval", 
+                    true_value = simulation_system.true_macrostate_dg)
 
 
 
@@ -115,8 +132,8 @@ def run_macrostate_dg_molecular_time(simulator_objects, n_replicates, max_we_rou
 
     for si, s in enumerate(simulator_objects):
         for ri in range(n_replicates):
-            trj, discrete_trj, we_weights, potentials, metadata, kB, T, delta_T = s.run(max_we_rounds)
-            fe_by_round = estimate_observables.importance_sampling_fe_by_we_round(trj, discrete_trj, we_weights, potentials, metadata, macrostate_classifier, kB, T, delta_T)
+            trj, discrete_trj, we_weights, potentials, metadata = s.run(max_we_rounds)
+            fe_by_round = estimate_observables.importance_sampling_fe_by_we_round(trj, discrete_trj, we_weights, potentials, metadata, macrostate_classifier, s.kB, s.T, s.delta_T)
             observables_all_crt[si,ri] = fe_by_round
 
 
