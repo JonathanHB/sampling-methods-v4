@@ -10,6 +10,7 @@ import random
 from collections import Counter
 import matplotlib.pyplot as plt
 
+from propagators_grid import propagate
 import propagators_v1
 import utility_v1
 import MSM_methods
@@ -230,7 +231,7 @@ def weighted_ensemble(x, e, w, cb, b, propagator, split_merge, config_binner, en
 
         #Propagate dynamics
         # beware that this propagator modifies x in place
-        # w is only passed in because it will be used to update metadynamics grids
+        # w is only passed in because it may be used to update metadynamics grids
         #TODO figure out if the following is needed:
         # certain observables have to be computed after the trajectory is propagated 
         # but before the propagator updates other internal variables like the metadynamics grid
@@ -279,6 +280,33 @@ class we_propagator_1():
     def propagate(self, x, w):
         return (propagators_v1.propagate_save1(self.system, self.kT, x, self.timestep, self.nsteps), np.ones(len(x)))
     
+    def mtd_grid(self):
+        return None
+
+class we_propagator_2():
+    
+    def __init__(self, simulated_system, kT, mtd_params, n_gaussians_per_round):
+        self.system = simulated_system
+        self.kT = kT
+        self.mtd_params = mtd_params
+        self.n_gaussians_per_round = n_gaussians_per_round
+        self.CV = mtd_params["CV"] #to simplify referencing
+    
+    def propagate(self, x, w):
+
+        init_potentials = np.zeros((len(x), self.CV.grid_n))
+
+        traj, pots = propagate(
+            G=self.system.G, kT=self.kT, dt=self.mtd_params["dt"], xi = self.system.xi, 
+            init_coords=x, init_potentials=init_potentials, 
+            steps_per_saved_frame=self.mtd_params["n_steps_per_frame"],
+            n_gaussians=self.n_gaussians_per_round, 
+            frames_per_gaussian=self.mtd_params["n_frames_per_gaussian"],
+            CV=self.CV.cv_funct, grad_CV=self.CV.cv_grad_funct, 
+            sigma=self.mtd_params["sigma"], omega=self.mtd_params["omega"], delta_T=self.mtd_params["delta_T"],
+            cv_min=self.CV.cv_min, cv_max=self.CV.cv_max
+        )
+
     def mtd_grid(self):
         return None
 
@@ -473,4 +501,100 @@ def sampler_we(system_args, resource_args, bin_args, sampler_params):
 
 
 
+#ON SECOND THOUGHT TRY TO USE THE ORIGINAL VERSION
+def weighted_ensemble_trjout(x, e, w, cb, b, propagator, split_merge, config_binner, ensemble_classifier, binner, nrounds, walkers_per_bin):
+    """
+    Run a WE+MTD simulation
     
+    Parameters
+    ----------
+    TODO: add these
+    n_we_rounds: int
+        Number of WE rounds to run
+
+    Returns
+    -------
+    trj: 4d numpy array of floats
+        of shape (n_we_rounds, max_n_walkers, n_frames_per_we_round, n_coordinates)
+        Each element is a coordinate. NaN values denote walkers which did not exist 
+        (i.e. not all bins were filled at the start of the round so less than the maximum number of walkers were spawned)
+
+    discrete_trj: 4d numpy array of ints
+        of shape (n_we_rounds, max_n_walkers, n_frames_per_we_round, n_coordinates)
+        Each element is an MTD grid index along one axis. NaN values are distributed as above.
+        This is the discrete version of trj
+
+    #TODO; do we actually need this or can we just save the partition function at each timepoint and the weight for each frame on the fly?
+    potentials: (3+n_CV_dimensions)d numpy array of floats
+        of shape (n_we_rounds, max_n_walkers, n_frames_per_we_round, [MTD grid dimensions])
+        Each element is an MTD potential value at a specific walker, time, and place
+        NaN values are distributed as above.
+        Because the MTD potential is not usually updated for every saved frame, this contains some redundant information
+    
+    we_weights: 2d numpy array of floats
+        of shape (n_we_rounds, max_n_walkers)
+        Each element is the WE weight of a walker. NaNs as above
+    
+    metadata: 2d numpy array of ints
+        of shape (n_we_rounds, max_n_walkers)
+        Each element is 1 if the walker was spawned, 0 otherwise. This should match the NaNs in the above two parameters.
+        This could be encoded in the WE weights by setting the weight to 0 for non-spawned walkers, but this is not done here to avoid confusion with the actual WE weights.
+    """
+
+    trj = np.zeros((nrounds, walkers_per_bin*config_binner.n_bins, propagator.n_gaussians_per_round*propagator.mtd_params["n_frames_per_gaussian"], propagator.system.n_dim)) * np.nan
+    discrete_trj = np.zeros_like(trj, dtype=int) * np.nan
+    potentials = np.zeros((nrounds, walkers_per_bin*config_binner.n_bins, propagator.n_gaussians_per_round*propagator.mtd_params["n_frames_per_gaussian"], *(n_gridpoints for _ in propagator.CV.grid_n))) * np.nan
+
+    we_weights = np.zeros((nrounds, walkers_per_bin*config_binner.n_bins)) * np.nan
+    metadata =   np.zeros((nrounds, walkers_per_bin*config_binner.n_bins)) * np.nan
+
+    x = x.copy()    #positions and/or MSM state indices for trajectories generated by an MSM
+    e = e.copy()    #ensembles for history augmented analysis
+    w = w.copy()    #WE weights
+    cb = cb.copy()  #configurational bin indices for MSM analysis
+    b = b.copy()    #bin indices for haMSM analysis
+    #es_args = es_args.copy() #arguments for enhanced sampling methods, such as a metadynamics potential grid. 
+    # This is only needed as a variable outside the propagator if each walker has its own es_args.
+
+    #observables = []
+
+    for r in range(nrounds):
+
+        # #print a note every 1/10th of the way there
+        # if r%max(round(nrounds/10), 1) == 0:
+        #     print(f"WE round {r}")
+
+        #deepcopy variables for observable calculation (i.e. to get transitions)
+        x_last = x.copy()
+        e_last = e.copy()
+        cb_last = cb.copy()
+        b_last = b.copy()
+
+        #Propagate dynamics
+        # beware that this propagator modifies x in place
+        # w is only passed in because it may be used to update metadynamics grids
+        #TODO figure out if the following is needed:
+        # certain observables have to be computed after the trajectory is propagated 
+        # but before the propagator updates other internal variables like the metadynamics grid
+        # these are returned in propagator_outputs
+        x_md, mtd_data = propagator.propagate(x, w)
+
+        #Calculate configurational bins
+        cb_md = config_binner.bin(x_md)
+
+        #Determine which ensemble each walker belongs to based on the new coordinates or configurational bins and the last ensembles.
+        # This need not use both x_md and cb_md; both are included to support different ensemble_classifier objects.
+        e_md = ensemble_classifier.ensemble(x_md, cb_md, e_last)
+
+        #Determine which bin each walker belongs to based on the new coordinates or configurational bins and its current ensemble.
+        # For non-history-augmented binning schemes e is unused and this simply returns the configurational bins cb_md.
+        b_md = binner.bin(cb_md, e_md)
+
+        #Calculate total bin occupancies, MSM transitions, and/or whatever other observables are desired
+        #observables.append(calc_observables(x_last, x_md, e_last, e_md, w, cb_last, cb_md, b_last, b_md, propagator, mtd_data))
+
+        #Split and merge trajectories
+        (w, x, e, b, cb) = split_merge(w, b_md, (x_md, e_md, b_md, cb_md), walkers_per_bin)
+
+    #return the final coordinates, ensembles, weights, bins, propagator (for metadynamics purposes when it is modified) and observables
+    #return x, e, w, cb, b, propagator#, observables

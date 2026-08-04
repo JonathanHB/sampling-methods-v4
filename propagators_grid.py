@@ -2,12 +2,15 @@ import itertools
 import numpy as np
 from typing import Callable
 
+#TODO: calculate MTD importance weights in here directly
+#rather than carting around a giant variable-dimensional array of potentials
 
 #written by claude sonnet 5 at medium effort on 7/29/26
 #a version of propagators_function_spec.py was uploaded with the prompt
 
 def propagate(G: Callable[[np.ndarray], np.ndarray],
-              kT: float,
+              kB: float,
+              T: float,
               dt: float,
               xi: int,
               init_coords: np.ndarray,
@@ -47,8 +50,11 @@ def propagate(G: Callable[[np.ndarray], np.ndarray],
         The first dimension of each array is the simulation index.
         The former array is of shape (n_parallel_simulations, n_dimensions), the latter is of length n_parallel_simulations
 
-    kT: float
-        Boltzmann's constant times the temperature
+    kB: float
+        Boltzmann's constant
+
+    T: float
+        Temperature
 
     dt: float
         The simulation timestep
@@ -121,6 +127,11 @@ def propagate(G: Callable[[np.ndarray], np.ndarray],
         The first two dimensions are the parallel walkers and the time (in increments of 1 gaussian deposition) respectively;
         the remaining n_cv dimensions are the bias grid. Records a snapshot of each walker's
         full bias grid after each gaussian deposition.
+    
+    mtd_weights: 2d numpy array of floats
+        of shape (n_parallel_simulations, n_gaussians*n_steps_per_gaussian).
+        The MTD importance weights for each walker at each saved frame.
+    
     """
 
     init_coords = np.asarray(init_coords, dtype=float)
@@ -152,13 +163,14 @@ def propagate(G: Callable[[np.ndarray], np.ndarray],
     total_frames = n_gaussians * frames_per_gaussian
     trajectories = np.empty((n_walkers, total_frames, n_dim), dtype=float)
     potentials = np.empty((n_walkers, n_gaussians, *grid_shape), dtype=float)
+    mtd_weights = np.empty((n_walkers, total_frames), dtype=float)
 
     V_grid = init_potentials.copy()  # (n_walkers, *grid_shape)
 
     coords = init_coords.copy()
     rng = np.random.default_rng()
     dt_over_xi = dt / xi
-    sqrt_2kT_dt_over_xi = np.sqrt(2.0 * kT * dt / xi)
+    sqrt_2kT_dt_over_xi = np.sqrt(2.0 * kB * T * dt / xi)
 
     fd_eps = 1e-6
 
@@ -217,7 +229,7 @@ def propagate(G: Callable[[np.ndarray], np.ndarray],
         V = interpolated[:, 0]
         dVds = interpolated[:, 1:]         # (n_walkers, n_cv)
 
-        dVdx = np.einsum('wc,wcd->wd', dVds, dsdx)
+        dVdx = np.einsum('wc,wcd->wd', dVds, dsdx) #TODO verify that this implements the correct matrix multiplication [copilot: for the gradient chain rule. It should be (n_walkers, n_dimensions) in the end.]
         return V, dVdx, s
 
     def deposit(v_grid: np.ndarray, centers: np.ndarray, heights: np.ndarray) -> np.ndarray:
@@ -245,15 +257,26 @@ def propagate(G: Callable[[np.ndarray], np.ndarray],
                 coords = coords + force * dt_over_xi + sqrt_2kT_dt_over_xi * noise
 
             trajectories[:, frame_idx, :] = coords
+
+            V_current, _, _ = bias_value_and_grad(coords, fields) #not terribly efficient to recompute this, but it's only done once per saved frame, not every MD step
+
+            Z0 = np.sum(np.exp(V_grid*(1/T + 1/delta_T)/kB))
+            Z1 = np.sum(np.exp(V_grid*(1/delta_T)/kB))
+            partition_ratio = np.divide(Z1,Z0)
+
+            exp_factor = np.exp(V_current/(kB*T))
+
+            mtd_weights[:, frame_idx] = np.multiply(exp_factor, partition_ratio)
+
             frame_idx += 1
 
         # deposit a new, well-tempered gaussian at the current position
         V_current, _, s_current = bias_value_and_grad(coords, fields)
-        new_heights = omega * np.exp(-V_current / (kT * delta_T))
+        new_heights = omega * np.exp(-V_current / (kB * delta_T))
 
         V_grid = deposit(V_grid, s_current, new_heights)
         fields = compute_fields(V_grid)  # refresh once per deposition, reused until the next one
 
         potentials[:, g, ...] = V_grid
 
-    return trajectories, potentials
+    return trajectories, potentials, mtd_weights
