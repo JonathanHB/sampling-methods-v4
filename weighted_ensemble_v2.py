@@ -18,6 +18,7 @@ import MSM_methods
 ###################################################################################################
 #                                      MERGING AND SPLITTING
 
+#TODO: check resampling scheme in westpa 2.0 in case it's changed
 #TODO: this function seems too long; can it be refactored?
 
 #split and merge walkers to ensure that each bin has the target number of walkers
