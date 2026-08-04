@@ -95,8 +95,8 @@ def test_propagators_grid_1d_cv():
 
     visualization.plot_G_surface(sim_system.G, x_limits = ((sim_system.coord_min[0], sim_system.coord_max[0]), (sim_system.coord_min[1], sim_system.coord_max[1])), n=200, center=None, slice_axis=0)
 
-    traj, pots = propagate(
-        G=sim_system.G, kT=kT, dt=0.01, xi = sim_system.xi, init_coords=init_coords,
+    traj, pots, weights = propagate(
+        G=sim_system.G, kB=kB, T=T, dt=0.01, xi = sim_system.xi, init_coords=init_coords,
         init_potentials=init_potentials, steps_per_saved_frame=100,
         n_gaussians=300, frames_per_gaussian=10,
         CV=CV.cv_funct, grad_CV=CV.cv_grad_funct, sigma=sigma, omega=omega, delta_T=delta_T,
@@ -138,7 +138,20 @@ def test_propagators_grid_1d_cv():
     plt.ylabel('x1')
     plt.show()
 
+    #pops = np.histogram2d(traj[0,:,0], traj[0,:,1], bins=CV.grid_n, range=[[CV.cv_min[0], CV.cv_max[0]], [CV.cv_min[1], CV.cv_max[1]]], density=True)
+    pops_1d = np.histogram(traj[0,:,0], bins=CV.grid_n, range=(CV.cv_min[0], CV.cv_max[0]), weights=weights[0,:])
 
+    plt.plot(cv_grid, -kT*np.log(pops_1d[0]/np.sum(pops_1d[0])), label = "importance sampling FE estimate")
+    #plt.hist(-kT*np.log(traj[0,:,0]/np.sum(traj[0,:,0])), weights = weights[0,:], bins=CV.grid_n, density=True, alpha=0.5, label='x0=CV')
+
+    fe_norm = free_energy_grid + kT*np.log(np.sum(np.exp(-free_energy_grid/kT)))
+
+    plt.plot(cv_grid, fe_norm, linestyle="dashed", color="black", linewidth="3", label="true FE")
+
+    plt.xlabel("CV")
+    plt.ylabel("Free Energy (kT)")
+
+    plt.show()
 
 def test_propagators_grid_2d_cv():
 
@@ -146,7 +159,7 @@ def test_propagators_grid_2d_cv():
 
     T=1
     kB=1
-    kT = kB*T
+    #kT = kB*T
 
     sim_system = energy_landscapes.diagonal_2well_2d_system
     CV2 = collective_variables.cv_coord01_2d_coord_2d_cv
@@ -157,8 +170,8 @@ def test_propagators_grid_2d_cv():
     init_potentials2 = np.zeros((n_walkers, *grid_shape2))
 
 
-    traj2, pots2 = propagate(
-        G=sim_system.G, kT=kT, dt=0.001, xi = sim_system.xi, init_coords=init_coords,
+    traj2, pots2, weights2 = propagate(
+        G=sim_system.G, kB=kB, T=T, dt=0.001, xi = sim_system.xi, init_coords=init_coords,
         init_potentials=init_potentials2, steps_per_saved_frame=100,
         n_gaussians=300, frames_per_gaussian=10,
         CV=CV2.cv_funct, grad_CV=CV2.cv_grad_funct, sigma=sigma2, omega=2, delta_T=40.0,

@@ -258,21 +258,23 @@ def propagate(G: Callable[[np.ndarray], np.ndarray],
 
             trajectories[:, frame_idx, :] = coords
 
+            #|-----> added by JHB on 8/3/26 to compute MTD importance weights for each walker at each saved frame
             V_current, _, _ = bias_value_and_grad(coords, fields) #not terribly efficient to recompute this, but it's only done once per saved frame, not every MD step
 
-            Z0 = np.sum(np.exp(V_grid*(1/T + 1/delta_T)/kB))
-            Z1 = np.sum(np.exp(V_grid*(1/delta_T)/kB))
+            Z0 = np.sum(np.exp(V_grid*(1/T + 1/delta_T)/kB), axis=tuple(range(1, potentials.ndim)))
+            Z1 = np.sum(np.exp(V_grid*(1/delta_T)/kB), axis=tuple(range(1, potentials.ndim)))
             partition_ratio = np.divide(Z1,Z0)
 
             exp_factor = np.exp(V_current/(kB*T))
 
             mtd_weights[:, frame_idx] = np.multiply(exp_factor, partition_ratio)
+            #<-----| end addition
 
             frame_idx += 1
 
         # deposit a new, well-tempered gaussian at the current position
         V_current, _, s_current = bias_value_and_grad(coords, fields)
-        new_heights = omega * np.exp(-V_current / (kB * delta_T))
+        new_heights = omega * np.exp(-V_current / (kB * delta_T)) #originally had an extra factor of T via kT
 
         V_grid = deposit(V_grid, s_current, new_heights)
         fields = compute_fields(V_grid)  # refresh once per deposition, reused until the next one
