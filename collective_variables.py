@@ -24,7 +24,7 @@ class collective_variable:
 #1D CV
 
 def CV_coord0(x):
-    return x[:, :1]
+    return x[:, :1] #I think this differs from x[:, 0] by returning a 2d array with of shape (n,1) rather than a 1d array of shape (n)
 
 def grad_CV_coord0(x):
     n = x.shape[0]

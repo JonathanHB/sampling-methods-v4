@@ -142,12 +142,12 @@ def test_propagators_grid_1d_cv():
     pops_1d = np.histogram(traj[0,:,0], bins=CV.grid_n, range=(CV.cv_min[0], CV.cv_max[0]), weights=weights[0,:])
 
     plt.plot(cv_grid, -kT*np.log(pops_1d[0]/np.sum(pops_1d[0])), label = "importance sampling FE estimate")
-    #plt.hist(-kT*np.log(traj[0,:,0]/np.sum(traj[0,:,0])), weights = weights[0,:], bins=CV.grid_n, density=True, alpha=0.5, label='x0=CV')
 
     fe_norm = free_energy_grid + kT*np.log(np.sum(np.exp(-free_energy_grid/kT)))
 
     plt.plot(cv_grid, fe_norm, linestyle="dashed", color="black", linewidth="3", label="true FE")
 
+    plt.legend()
     plt.xlabel("CV")
     plt.ylabel("Free Energy (kT)")
 

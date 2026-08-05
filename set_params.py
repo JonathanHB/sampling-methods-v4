@@ -46,6 +46,10 @@ def autocorrelation_decay_constant(signal, dt, max_lag_frac=0.5):
     mask = acf > 0
     lags_fit, acf_fit = lags[mask], acf[mask]
 
+    # tau0 = lags_fit[-1] / 3
+    # plt.plot(-lags_fit/tau0)
+    # plt.show()
+
     def exp_decay(t, tau):
         return np.exp(-t / tau)
 

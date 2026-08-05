@@ -53,7 +53,9 @@ def multiplot_observable_convergence(observables_all_crt, condition_names, timep
         for (observables_all_t, timepoints_all_t) in zip(observables_all_rt, timepoints_all_rt):
 
             #plot data from each replicate
-            ax[i].plot(timepoints_all_t, observables_all_t)
+            ax[i].scatter(timepoints_all_t, observables_all_t, alpha=0.5)
+            ax[i].plot(timepoints_all_t, observables_all_t, alpha=0.5)
+
             ax[i].axhline(true_value, linestyle="dashed", color="black")
 
             #label y axis
@@ -61,7 +63,7 @@ def multiplot_observable_convergence(observables_all_crt, condition_names, timep
 
             #set axis limits
             ax[i].set_xlim(0, max(timepoints_all_crt.flatten())) #use overall maximum time
-            ax[i].set_ylim(-20,20)
+            ax[i].set_ylim(-30,2)
 
     #overall plot labels and scaling
     plt.subplots_adjust(hspace=0.13, wspace=0.1, top=0.6, bottom=0, left=0, right=0.8)

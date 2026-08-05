@@ -11,24 +11,30 @@ To do list
     feed cleaned code to claude and ask it to check it; also upload huber and kim 1996 
 4. Done: make a metadynamics wrapper function matching the WE propagator requirements (this is just a WE propagator object)
 5. Done: assemble all of this in main and test it
+6.5: Done: write code so parameters can be input in terms of times and then converted to step counts
+    t_molecular
+    t_we_round
+    t_gaussian
+    t_frame
+    dt
+    vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+    n_we_rounds = t_molecular/t_we_round
+    n_gaussians_per_we_round = t_we_round/t_gaussian
+    n_frames_per_gaussian = t_gaussian/t_frame
+    n_steps_per_frame = t_frame/dt
+7. Done: write function to set MTD parameters based on the existing one in msm_toy_systems/
+    implement binless correlation time calculation (on hold: and see if it matches MSM)
+8. Done: adjust WE intervals
+9. Done: update plotter to plot at fixed time intervals regardless of WE interval (give each frame a timestamp or something)
+
+10. rewrite time + step -setting code to use a fixed wall clock time and fixed number of gpus 
 
 
-6. write a proper macrostate classifier, and a macrostate free energy difference calculator
-6.5: write code so parameters can be input in terms of times and then converted to step counts
-t_molecular
-t_we_round
-t_gaussian
-t_frame
-dt
 
-n_we_rounds = t_molecular/t_we_round
-n_gaussians_per_we_round = t_we_round/t_gaussian
-n_frames_per_gaussian = t_gaussian/t_frame
-n_steps_per_frame = t_frame/dt
+11. write a macrostate free energy difference calculator
 
-7. write a plotter to show FE estimate evolution over time and some WE diagnostics like the bin population probability
-8. write function to set MTD parameters based on the existing one in msm_toy_systems/
-    implement binless diffusion coefficient calculation and see if it matches MSM
+12. write a plotter to show FE estimate evolution over time and some WE diagnostics like the bin population probability
+
 
 Low priority
 
