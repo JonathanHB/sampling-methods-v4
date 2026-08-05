@@ -104,6 +104,6 @@ def set_mtd_params_from_unbiased_literature_advice(simulation_system, kB, T, CV,
     omega = 0.1
     tau = np.max(taus)
     t_frame=tau/10
-    t_gaussian=tau*2
+    t_gaussian=tau
 
     return delta_T, sigma, omega, t_frame, t_gaussian

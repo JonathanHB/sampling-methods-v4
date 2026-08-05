@@ -42,7 +42,7 @@ def multiplot_main_variable_WE():
 
     #timescales
     dt=0.005
-    t_molecular = 2000
+    t_molecular = 50
 
 
     #MTD parameters
@@ -57,7 +57,10 @@ def multiplot_main_variable_WE():
     delta_T, sigma, omega, t_frame, t_gaussian = set_params.set_mtd_params_from_unbiased_literature_advice(simulation_system, kB, T, CV, dt, n_frames=10000)
 
     n_steps_per_frame = int(t_frame/dt)
+    print(f"n_steps_per_frame={n_steps_per_frame}")
+
     n_frames_per_gaussian = int(t_gaussian/t_frame)
+    print(f"n_frames_per_gaussian={n_frames_per_gaussian}")
 
     mtd_params = {'dt': dt, 
                   'n_steps_per_frame': n_steps_per_frame, 
@@ -148,6 +151,9 @@ def run_macrostate_dg_molecular_time(simulator_objects, n_replicates, max_we_rou
 
     for si, s in enumerate(simulator_objects):
         print(f"-- running condition {si+1} of {len(simulator_objects)}")
+        print(f"with n_gaussians_per_round = {s.we_params["n_gaussians_per_round"]}")
+        print(f"with n_we_rounds = {s.we_params["n_we_rounds"]}")
+
         for ri in range(n_replicates):
             print(f"running replicate {ri+1} of {n_replicates}")
 
