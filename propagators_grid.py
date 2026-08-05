@@ -2,8 +2,9 @@ import itertools
 import numpy as np
 from typing import Callable
 
-#TODO: calculate MTD importance weights in here directly
-#rather than carting around a giant variable-dimensional array of potentials
+
+#TODO: we seem to be missing a parameter to describe the relative influence of noise and gradient descent
+
 
 #written by claude sonnet 5 at medium effort on 7/29/26
 #a version of propagators_function_spec.py was uploaded with the prompt

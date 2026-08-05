@@ -9,7 +9,8 @@ class collective_variable:
                 cv_grad_funct: Callable[[np.ndarray], np.ndarray],
                 cv_min: np.array,
                 cv_max: np.array,
-                grid_n: np.array
+                grid_n: np.array,
+                n_cv_dim: int
                 ):
         
         self.cv_funct = cv_funct
@@ -17,6 +18,7 @@ class collective_variable:
         self.cv_min = cv_min
         self.cv_max = cv_max
         self.grid_n = grid_n
+        self.n_cv_dim = n_cv_dim
 
 
 #1D CV
@@ -37,7 +39,8 @@ cv_coord0_2d_coord_1d_cv = collective_variable(
     cv_grad_funct= grad_CV_coord0,
     cv_min=np.array([-3.0]),
     cv_max=np.array([3.0]),
-    grid_n = 81
+    grid_n = 81,
+    n_cv_dim = 1
 )
 
 
@@ -60,5 +63,17 @@ cv_coord01_2d_coord_2d_cv = collective_variable(
     cv_grad_funct= grad_CV_coord01,
     cv_min=np.array([-3.0, -3.0]),
     cv_max=np.array([3.0, 3.0]),
-    grid_n = 81
+    grid_n = 81,
+    n_cv_dim = 2
 )
+
+# #macrostate classifiers
+# def macrostate_classifier_1dcv_0boundary(cv):
+#     return np.where(cv[:,0] > 0, 1, 0)
+
+
+#coord macrostate classifier
+#note that this is normally applied to flattened coordinates in the observable estimator
+#so it does not need another colon :
+def macrostate_classifier_coord0_eq0(coords):
+    return np.where(coords[:,0] > 0.0, 1, 0)

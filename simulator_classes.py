@@ -20,6 +20,7 @@ class we_mtd_simulator:
             n_we_bins: int, 
             n_gaussians_per_round: int, 
                 number of gaussians to add to the MTD potential per WE round
+            n_we_rounds: int,
             CV: collective_variable() object from collective_variables.py
             macrostate_classifier: a macrostate_classifier() object from macrostate_classifiers.py
                 YET TO BE ACTUALLY IMPLEMENTED; currently uses a dummy function
@@ -52,9 +53,10 @@ class we_mtd_simulator:
         self.we_params = we_params
         self.mtd_params = mtd_params
         self.energy_landscape = energy_landscape
+        self.we_round_length = self.we_params["n_gaussians_per_round"]*self.mtd_params["n_frames_per_gaussian"]*self.mtd_params["n_steps_per_frame"]*self.mtd_params["dt"]
 
 
-    def run(self, n_we_rounds):
+    def run(self):
         """
         Run a WE+MTD simulation for a specified number of WE rounds
         
@@ -120,7 +122,7 @@ class we_mtd_simulator:
         # print(b)
         # print(b.shape)
 
-        x, e, w, cb, b, propagator, observables = weighted_ensemble_v2.weighted_ensemble(x, e, w, cb, b, propagator0, weighted_ensemble_v2.split_merge, config_binner, ensemble_classifier, binner, weighted_ensemble_v2.calc_observables_2, n_we_rounds, self.we_params['walkers_per_bin'])
+        x, e, w, cb, b, propagator, observables = weighted_ensemble_v2.weighted_ensemble(x, e, w, cb, b, propagator0, weighted_ensemble_v2.split_merge, config_binner, ensemble_classifier, binner, weighted_ensemble_v2.calc_observables_2, self.we_params['n_we_rounds'], self.we_params['walkers_per_bin'])
 
         #effectively transpose the list of lists so the first axis is observable type rather than time
         #but without the data type/structure requirement of a numpy array

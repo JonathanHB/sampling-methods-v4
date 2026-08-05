@@ -6,17 +6,29 @@ To do list
 2. Done: make a CV object containing a CV, CV gradient, and CV limits
 2.5. Done: update tests
 2.6. Done: clean up repo
-2.7. write a macrostate classifier, and a macrostate free energy difference calculator
-3. write updated WE code
+3. Done: write updated WE code
     manually clean and review current code
     feed cleaned code to claude and ask it to check it; also upload huber and kim 1996 
-4. make a metadynamics wrapper function matching the WE propagator requirements (this is just a WE propagator object)
-5. make simulation system object (and decide if this actually makes sense) w/ macrostate classifier (or make the classifier its own thing with the CV?)
-6. write function to set MTD parameters based on the existing one in msm_toy_systems/
+4. Done: make a metadynamics wrapper function matching the WE propagator requirements (this is just a WE propagator object)
+5. Done: assemble all of this in main and test it
+
+
+6. write a proper macrostate classifier, and a macrostate free energy difference calculator
+6.5: write code so parameters can be input in terms of times and then converted to step counts
+t_molecular
+t_we_round
+t_gaussian
+t_frame
+dt
+
+n_we_rounds = t_molecular/t_we_round
+n_gaussians_per_we_round = t_we_round/t_gaussian
+n_frames_per_gaussian = t_gaussian/t_frame
+n_steps_per_frame = t_frame/dt
+
+7. write a plotter to show FE estimate evolution over time and some WE diagnostics like the bin population probability
+8. write function to set MTD parameters based on the existing one in msm_toy_systems/
     implement binless diffusion coefficient calculation and see if it matches MSM
-7. assemble all of this in main and test it
-
-
 
 Low priority
 
