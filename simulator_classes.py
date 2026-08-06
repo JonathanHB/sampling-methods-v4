@@ -20,7 +20,8 @@ class we_mtd_simulator:
             n_we_bins: int, 
             n_gaussians_per_round: int, 
                 number of gaussians to add to the MTD potential per WE round
-            n_we_rounds: int,
+            t_wall: int,
+            n_gpus: int,
             CV: collective_variable() object from collective_variables.py
             macrostate_classifier: a macrostate_classifier() object from macrostate_classifiers.py
                 YET TO BE ACTUALLY IMPLEMENTED; currently uses a dummy function
@@ -100,12 +101,12 @@ class we_mtd_simulator:
         propagator0 = weighted_ensemble_v2.we_propagator_2(self.energy_landscape, self.kB, self.T, self.mtd_params, self.we_params['n_gaussians_per_round'])
 
         #initial state
-        x = -np.ones((self.we_params['walkers_per_bin'], self.energy_landscape.n_dim))
+        x = -np.ones((self.we_params['n_gpus'], self.energy_landscape.n_dim))
         #x0 = np.random.uniform(-1.5, -0.5, size=(n_walkers, sim_system.n_dim))
         #standard_init_coord = np.array([-1,-1])
         #x0 = np.array([standard_init_coord for element in range(walkers_per_bin)]) #.reshape((walkers_per_bin, 1, len(system.standard_init_coord)))
         e = self.we_params["macrostate_classifier"](x) #initial ensemble is determined by the macrostate classifier
-        w = np.ones(self.we_params['walkers_per_bin'])/self.we_params['walkers_per_bin']  
+        w = np.ones(self.we_params['n_gpus'])/self.we_params['n_gpus']  
         ##[1/walkers_per_bin for element in range(walkers_per_bin)]
         cb = config_binner.bin(x)  #configurational bins
         b = binner.bin(cb, e)
@@ -122,7 +123,17 @@ class we_mtd_simulator:
         # print(b)
         # print(b.shape)
 
-        x, e, w, cb, b, propagator, observables = weighted_ensemble_v2.weighted_ensemble(x, e, w, cb, b, propagator0, weighted_ensemble_v2.split_merge, config_binner, ensemble_classifier, binner, weighted_ensemble_v2.calc_observables_2, self.we_params['n_we_rounds'], self.we_params['walkers_per_bin'])
+        n_gpu_rounds_t_wall = int(np.round(self.we_params["t_wall"]/self.we_round_length))
+
+        dummy_werounds = 10**5
+        x, e, w, cb, b, propagator, observables = weighted_ensemble_v2.weighted_ensemble(x, e, w, cb, b, 
+                                                                                         propagator0, 
+                                                                                         weighted_ensemble_v2.split_merge, 
+                                                                                         config_binner, 
+                                                                                         ensemble_classifier, 
+                                                                                         binner, 
+                                                                                         weighted_ensemble_v2.calc_observables_2, 
+                                                                                         dummy_werounds, self.we_params['walkers_per_bin'], n_gpu_rounds_t_wall, self.we_params['n_gpus'])
 
         #effectively transpose the list of lists so the first axis is observable type rather than time
         #but without the data type/structure requirement of a numpy array

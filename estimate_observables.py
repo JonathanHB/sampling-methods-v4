@@ -111,7 +111,7 @@ def importance_sampling_fe_by_we_round(trj, mtd_weights, we_weights, macrostate_
 
 
 
-def importance_sampling_fe_by_timepoint(trj, mtd_weights, we_weights, macrostate_classifier, CV, sim_system, kT, n_timepoints):
+def importance_sampling_fe_by_timepoint(trj, mtd_weights, we_weights, macrostate_classifier, CV, sim_system, kT, n_timepoints, max_n_frames):
     """
     Calculate the importance sampling estimate of a macrostate free energy difference 
     via the importance sampling estimate of equilibrium populations.
@@ -151,7 +151,9 @@ def importance_sampling_fe_by_timepoint(trj, mtd_weights, we_weights, macrostate
     """
 
     n_frames = sum([tr.shape[1] for tr in trj])
-    print(f"molecular length = {n_frames} frames")
+    print(f"molecular time = {n_frames} frames")
+    aggregate_frames = sum([tr.shape[0]*tr.shape[1] for tr in trj])
+    print(f"aggregate time = {aggregate_frames} frames")
 
     delta_G = np.zeros(n_timepoints)
 
@@ -163,10 +165,16 @@ def importance_sampling_fe_by_timepoint(trj, mtd_weights, we_weights, macrostate
 
     min_frame = 0
 
+    #TODO: track wall clock time as you go and cut off estimation once you hit the limit
+
     for tp in range(n_timepoints):
 
         #print(f"timepoint {tp}")
-        max_frame = int(round(n_frames*(tp+1)/n_timepoints))
+        max_frame = int(round(max_n_frames*(tp+1)/n_timepoints))
+
+        if max_frame>n_frames:
+            delta_G[tp] = -np.inf
+            continue
 
         curr_frame = 0
         #loop over WE rounds
@@ -212,6 +220,10 @@ def importance_sampling_fe_by_timepoint(trj, mtd_weights, we_weights, macrostate
         pop_state_A = importance_sampling_estimator(coords_cumulative, importance_weights_cumulative, macrostate_classifier)
 
         delta_G[tp] = -np.log((1-pop_state_A)/pop_state_A)
+
+    importance_weights_cumulative = np.concatenate(importance_weights_flattened_by_timepoint)
+    print(f"used {len(importance_weights_cumulative)} datapoints")
+
 
     # import sys
     # sys.exit(0)

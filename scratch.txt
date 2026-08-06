@@ -1,5 +1,13 @@
 
 
+    VVVVVV THIS!!! VVVVVV
+the fundamental issue with the WE+MTD approach is that WE wants 
+a resampling time shorter than the correlation time in the starting well 
+so that the walkers don't just slide back down within a single WE round, 
+whereas MTD wants a resampling time at least as long as the correlation time
+so that the walker distribution has time to adjust to the gaussian deposition
+
+
 To do list
 
 1. Done: make a system object containing a potential, coordinate limits, and a diffusion coefficient
@@ -27,8 +35,10 @@ To do list
 8. Done: adjust WE intervals
 9. Done: update plotter to plot at fixed time intervals regardless of WE interval (give each frame a timestamp or something)
 
-10. rewrite time + step -setting code to use a fixed wall clock time and fixed number of gpus 
+10. Mostly Done; see below: rewrite time + step -setting code to use a fixed wall clock time and fixed number of gpus 
 
+11. fix analysis so that the aggregate time doesn't vary so drastically (or at least figure out why it does)
+    in estimate_observables: #TODO: track wall clock time as you go and cut off estimation once you hit the limit
 
 
 11. write a macrostate free energy difference calculator
