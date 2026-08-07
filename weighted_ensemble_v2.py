@@ -252,7 +252,8 @@ def weighted_ensemble(x, e, w, cb, b, propagator, split_merge, config_binner, en
 
         #Calculate configurational bins
         cb_md = config_binner.bin(x_md)
-        bin_pops[r,cb_md]+=1
+        for cb_md_i in cb_md:
+            bin_pops[r,cb_md_i]+=1
 
         #Determine which ensemble each walker belongs to based on the new coordinates or configurational bins and the last ensembles.
         # This need not use both x_md and cb_md; both are included to support different ensemble_classifier objects.
@@ -273,7 +274,13 @@ def weighted_ensemble(x, e, w, cb, b, propagator, split_merge, config_binner, en
             # plt.hist(w)
             # plt.show()
             plt.imshow(bin_pops[:r+1], interpolation='none')
+            plt.colorbar()
             plt.show()
+
+            # print(bin_pops[:r+1])
+            # print(np.min(bin_pops[:r+1]))
+            # print(np.max(bin_pops[:r+1]))
+
             break
 
 
