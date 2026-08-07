@@ -34,3 +34,17 @@ diagonal_2well_2d_system = energy_landscape(
 
 )
 
+
+def G_2w_2d_ortho(x):
+    return (x[:, 0]**2 - 3)**2 + 0.5*x[:, 1]**2
+
+cv0_2well_2d_system = energy_landscape(
+    G = G_2w_2d_ortho,
+    coord_min = np.array([-3,-3]),
+    coord_max = np.array([3,3]),
+    grid_n = 81,
+    n_dim = 2,
+    xi = 1
+
+)
+

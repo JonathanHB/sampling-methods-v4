@@ -21,6 +21,7 @@ class we_mtd_simulator:
             n_gaussians_per_round: int, 
                 number of gaussians to add to the MTD potential per WE round
             t_wall: int,
+            max_we_rounds: int,
             n_gpus: int,
             CV: collective_variable() object from collective_variables.py
             macrostate_classifier: a macrostate_classifier() object from macrostate_classifiers.py
@@ -41,6 +42,8 @@ class we_mtd_simulator:
             omega: float,
                 MTD gaussian height parameter
             CV: collective_variable() object from collective_variables.py
+            v_inherit: bool
+                whether WE aalkers inherit the MTD potential from the previous round, using a sum weighted by WE weights
             )
         
         energy_landscape: energy_landscape() object from energy_landscapes.py
@@ -125,7 +128,6 @@ class we_mtd_simulator:
 
         n_gpu_rounds_t_wall = int(np.round(self.we_params["t_wall"]/self.we_round_length))
 
-        dummy_werounds = 10**5
         x, e, w, cb, b, propagator, observables = weighted_ensemble_v2.weighted_ensemble(x, e, w, cb, b, 
                                                                                          propagator0, 
                                                                                          weighted_ensemble_v2.split_merge, 
@@ -133,7 +135,7 @@ class we_mtd_simulator:
                                                                                          ensemble_classifier, 
                                                                                          binner, 
                                                                                          weighted_ensemble_v2.calc_observables_2, 
-                                                                                         dummy_werounds, self.we_params['walkers_per_bin'], n_gpu_rounds_t_wall, self.we_params['n_gpus'])
+                                                                                         self.we_params['max_we_rounds'], self.we_params['walkers_per_bin'], n_gpu_rounds_t_wall, self.we_params['n_gpus'])
 
         #effectively transpose the list of lists so the first axis is observable type rather than time
         #but without the data type/structure requirement of a numpy array

@@ -35,7 +35,7 @@ from propagators_grid import propagate
 
 def split_merge(w, b, walkerdata_transposed, walkers_per_bin, n_gpus):
 
-    excess_walkers = len(w)-n_gpus
+    # excess_walkers = len(w)-n_gpus #added by JHB on 8/5/26 
 
     printdebug = False
 
@@ -90,16 +90,16 @@ def split_merge(w, b, walkerdata_transposed, walkers_per_bin, n_gpus):
                     if w[i] >= split_limit:
                         #this is the normal WE algorithm
                         w_out.append(w[i]/(1+duplicated_walkers.count(i)))
-                        if j>0:
-                            #this is for the new setting which avoids going below n_gpus walkers
-                            excess_walkers+=1 
+                        # if j>0: #added 8/5/26
+                        #     #this is for the new setting which avoids going below n_gpus walkers
+                        #     excess_walkers+=1 
                     else:
                         w_out.append(w[i])
                         break #do not duplicate too-light walkers
 
 
         #merge simulations in bins with too many walkers
-        elif len(indset) > walkers_per_bin and excess_walkers > 0:
+        elif len(indset) > walkers_per_bin: # and excess_walkers > 0:
 
             #total bin weight; does not change because merging operations preserve weight
             w_bin = sum([w[i] for i in indset])
@@ -137,8 +137,8 @@ def split_merge(w, b, walkerdata_transposed, walkers_per_bin, n_gpus):
                 removed_weight = w_local_indset[removed_walker]
                 w_local_indset = [i for ii, i in enumerate(w_local_indset) if ii != removed_walker]
 
-                #this is for the new setting which avoids going below n_gpus walkers
-                excess_walkers-=1 
+                # #this is for the new setting which avoids going below n_gpus walkers
+                # excess_walkers-=1 #added 8/5/26
 
                 #-------------------------------------experimental--------------------------------------------------
                 if maxweight:
@@ -226,6 +226,8 @@ def weighted_ensemble(x, e, w, cb, b, propagator, split_merge, config_binner, en
 
     n_gpu_rounds = 0
 
+    bin_pops = np.zeros((nrounds, config_binner.n_bins))
+
     observables = []
 
     for r in range(nrounds):
@@ -250,6 +252,7 @@ def weighted_ensemble(x, e, w, cb, b, propagator, split_merge, config_binner, en
 
         #Calculate configurational bins
         cb_md = config_binner.bin(x_md)
+        bin_pops[r,cb_md]+=1
 
         #Determine which ensemble each walker belongs to based on the new coordinates or configurational bins and the last ensembles.
         # This need not use both x_md and cb_md; both are included to support different ensemble_classifier objects.
@@ -262,10 +265,18 @@ def weighted_ensemble(x, e, w, cb, b, propagator, split_merge, config_binner, en
         #Calculate total bin occupancies, MSM transitions, and/or whatever other observables are desired
         observables.append(calc_observables(x_last, x_md, e_last, e_md, w, cb_last, cb_md, b_last, b_md, propagator, mtd_data))
 
-        n_gpu_rounds += int(np.ceil(len(x)/n_gpus)) #note that this does not account for small additional costs if the number of walkers is not a multiple of the number of gpus
+        n_gpu_rounds += len(x)/n_gpus #int(np.ceil(len(x)/n_gpus)) #note that this does not account for small additional costs if the number of walkers is not a multiple of the number of gpus
         if n_gpu_rounds >= n_gpu_rounds_t_wall:
-            print(f"reached the maximum number of gpu (and hence WE) rounds permitted by the WE round length, number of GPUs, and wall clock time limit {n_gpu_rounds} >= {n_gpu_rounds_t_wall} after {r} WE rounds")
+            #print(f"reached the maximum number of gpu (and hence WE) rounds permitted by the WE round length, number of GPUs, and wall clock time limit {n_gpu_rounds} >= {n_gpu_rounds_t_wall} after {r} WE rounds")
+            # plt.plot(np.average(mtd_data[1][:,-1], axis=0, weights = w))
+            # plt.show()
+            # plt.hist(w)
+            # plt.show()
+            plt.imshow(bin_pops[:r+1], interpolation='none')
+            plt.show()
             break
+
+
 
         #Split and merge trajectories
         (w, x, e, b, cb) = split_merge(w, b_md, (x_md, e_md, b_md, cb_md), walkers_per_bin, n_gpus)
@@ -309,10 +320,11 @@ class we_propagator_2():
         self.mtd_params = mtd_params
         self.n_gaussians_per_round = n_gaussians_per_round
         self.CV = mtd_params["CV"] #to simplify referencing
+        self.single_potential = np.zeros(self.CV.grid_n)
     
     def propagate(self, x, w):
 
-        init_potentials = np.zeros((len(x), self.CV.grid_n))
+        init_potentials = np.stack((self.single_potential, )*len(x), axis=0)
 
         traj, pots, weights = propagate(
             G=self.system.G, kB=self.kB, T = self.T, dt=self.mtd_params["dt"], xi = self.system.xi, 
@@ -324,6 +336,11 @@ class we_propagator_2():
             sigma=self.mtd_params["sigma"], omega=self.mtd_params["omega"], delta_T=self.mtd_params["delta_T"],
             cv_min=self.CV.cv_min, cv_max=self.CV.cv_max
         )
+
+        #print(np.sum(pots))
+        if self.mtd_params["v_inherit"]:
+            #since the weights are normalized this is the same as the weighted sum
+            self.single_potential = np.average(pots[:,-1], axis=0, weights = w)
 
         return traj[:,-1], (traj, pots, weights)
 

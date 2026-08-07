@@ -157,3 +157,40 @@ def calc_MTD_importance_weights(potentials, discrete_trajectory, kB, T, delta_T)
 ############################################################################################
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 #                                        OLD CODE *ABOVE*
+    #-------------------------------------------------------------------------------------------------
+    #                                 PLOTTING CODE ONLY BELOW
+    if False:
+        cv_grid, free_energy_grid = collective_variable_analysis.free_energy_on_cv_grid(
+                free_energy_fn=sim_system.G,
+                coord_min=sim_system.coord_min,
+                coord_max=sim_system.coord_max,
+                n_micro_grid=sim_system.grid_n,
+                cv_fn=CV.cv_funct,
+                cv_min=CV.cv_min,
+                cv_max=CV.cv_max,
+                n_cv_grid=CV.grid_n,
+                kT = kT
+            )
+
+        #calculate the cumulative deltaG for all times
+        coords_cumulative = np.concatenate(trj_flattened_by_we_round)
+        importance_weights_cumulative = np.concatenate(importance_weights_flattened_by_we_round)
+
+        print(f"used {len(importance_weights_cumulative)} datapoints")
+
+        cv_coords = CV.cv_funct(coords_cumulative).flatten()
+        # plt.hist(cv_coords, weights=importance_weights_cumulative)
+        # plt.show()
+
+        pops_1d = np.histogram(cv_coords, bins=CV.grid_n, range=(CV.cv_min[0], CV.cv_max[0]), weights=importance_weights_cumulative)
+
+        plt.plot(cv_grid, -kT*np.log(pops_1d[0]/np.sum(pops_1d[0])), label = "importance sampling FE estimate")
+
+        fe_norm = free_energy_grid + kT*np.log(np.sum(np.exp(-free_energy_grid/kT)))
+
+        plt.plot(cv_grid, fe_norm, linestyle="dashed", color="black", linewidth="3", label="true FE")
+
+        plt.xlabel("CV")
+        plt.ylabel("Free Energy (kT)")
+
+        plt.show()

@@ -42,21 +42,37 @@ def autocorrelation_decay_constant(signal, dt, max_lag_frac=0.5):
     lags = np.arange(max_lag) * dt
     acf = corr[:max_lag]
 
+    #TODO for a direct exponential fit this should not be necessary; (why) are we linearizing?
+    #TODO just try without the mask
+    #   Is the problem that the curve_fit function expects very good convergence but the exponential will never match the negative bits? That actually would make no sense.
     # Fit only the positive part (log becomes undefined/noisy once ACF <= 0)
     mask = acf > 0
     lags_fit, acf_fit = lags[mask], acf[mask]
 
-    # tau0 = lags_fit[-1] / 3
-    # plt.plot(-lags_fit/tau0)
+    # tau0 = lags[-1] / 3
+    # print(tau0)
+    # plt.plot(-lags/tau0)
     # plt.show()
 
     def exp_decay(t, tau):
+        # print(t)
+        # print(tau)
         return np.exp(-t / tau)
 
-    popt, _ = curve_fit(exp_decay, lags_fit, acf_fit, p0=[lags_fit[-1] / 3])
-    tau = popt[0]
+    # popt, _ = curve_fit(exp_decay, lags_fit, acf_fit, p0=[lags_fit[-1] / 3])
+    # tau = popt[0]
 
-    return tau, lags, acf
+    popt2, _ = curve_fit(exp_decay, lags, acf, p0=[lags[-1] / 3])
+    tau2 = popt2[0]
+
+    # plt.plot(lags, acf)
+    # plt.plot(lags, np.exp(-lags/tau))
+    # plt.plot(lags, np.exp(-lags/tau2))
+    # print(tau, tau2)
+    # plt.xlim(0, 3)
+    # plt.show()
+
+    return tau2, lags, acf
 
 
 def set_mtd_params_from_unbiased_literature_advice(simulation_system, kB, T, CV, dt, n_frames):
@@ -91,7 +107,7 @@ def set_mtd_params_from_unbiased_literature_advice(simulation_system, kB, T, CV,
         cv_trj_i = cv_trj[:,dn]
 
         #get variance
-        sigma[dn] = np.std(cv_trj_i)
+        sigma[dn] = np.std(cv_trj_i)/2
 
         #get autocorrelation
         tau, lags, acf = autocorrelation_decay_constant(cv_trj_i, dt, max_lag_frac=0.5)
