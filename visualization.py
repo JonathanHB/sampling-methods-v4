@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 
 #written by copilot
-def plot_G_surface(G, x_limits, n=200, center=None, slice_axis=0):
+def plot_G_surface(G, x_limits, n=200, center=None, slice_axis=0, name=""):
     """
     Plot a 2D function G(x) as a heatmap and a 1D slice through the center.
 
@@ -45,7 +45,7 @@ def plot_G_surface(G, x_limits, n=200, center=None, slice_axis=0):
     ax.set_xlabel("x0")
     ax.set_ylabel("x1")
     ax.set_aspect("equal")
-    fig.colorbar(pcm, ax=ax, label="G(x)")
+    fig.colorbar(pcm, ax=ax, label="G(x) (kT)")
 
     ax2 = axes[1]
     if slice_axis == 0:
@@ -54,7 +54,7 @@ def plot_G_surface(G, x_limits, n=200, center=None, slice_axis=0):
         slice_vals = G(slice_pts)
         ax2.plot(coord_vals, slice_vals, lw=2)
         ax2.set_xlabel("x0")
-        ax2.set_ylabel(f"G(x0, x1={center[1]:.2f})")
+        ax2.set_ylabel(f"G(x0, x1={center[1]:.2f}) (kT)")
         ax2.set_title(f"Slice at x1={center[1]:.2f}")
     elif slice_axis == 1:
         coord_vals = np.linspace(x_min[1], x_max[1], n)
@@ -62,10 +62,12 @@ def plot_G_surface(G, x_limits, n=200, center=None, slice_axis=0):
         slice_vals = G(slice_pts)
         ax2.plot(coord_vals, slice_vals, lw=2)
         ax2.set_xlabel("x1")
-        ax2.set_ylabel(f"G(x0={center[0]:.2f}, x1)")
+        ax2.set_ylabel(f"G(x0={center[0]:.2f}, x1) (kT)")
         ax2.set_title(f"Slice at x0={center[0]:.2f}")
     else:
         raise ValueError("slice_axis must be 0 or 1")
 
     plt.tight_layout()
+    if name != "":
+        plt.savefig(f"figures/{name}.png", dpi=600)
     plt.show()

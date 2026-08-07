@@ -86,14 +86,14 @@ def test_propagators_grid_1d_cv():
     plt.xlabel('CV')
     plt.ylabel('Free Energy(CV)')
 
+    visualization.plot_G_surface(sim_system.G, x_limits = ((sim_system.coord_min[0], sim_system.coord_max[0]), (sim_system.coord_min[1], sim_system.coord_max[1])), n=200, center=None, slice_axis=0)
+
     init_coords = np.random.uniform(-1.5, 1.5, size=(n_walkers, sim_system.n_dim))
     init_potentials = np.zeros((n_walkers, CV.grid_n))
 
     sigma = np.array([0.2])
     delta_T = 40
     omega = 0.4
-
-    visualization.plot_G_surface(sim_system.G, x_limits = ((sim_system.coord_min[0], sim_system.coord_max[0]), (sim_system.coord_min[1], sim_system.coord_max[1])), n=200, center=None, slice_axis=0)
 
     traj, pots, weights = propagate(
         G=sim_system.G, kB=kB, T=T, dt=0.01, xi = sim_system.xi, init_coords=init_coords,
