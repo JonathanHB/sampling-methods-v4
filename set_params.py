@@ -75,7 +75,7 @@ def autocorrelation_decay_constant(signal, dt, max_lag_frac=0.5):
     return tau2, lags, acf
 
 
-def set_mtd_params_from_unbiased_literature_advice(simulation_system, kB, T, CV, dt, n_frames):
+def set_mtd_params_from_unbiased_literature_advice(simulation_system, kB, T, CV, dt, n_frames, dG_ts):
 
     # sigma = np.array([0.2])
     # delta_T = 40
@@ -119,11 +119,26 @@ def set_mtd_params_from_unbiased_literature_advice(simulation_system, kB, T, CV,
 
         # plt.plot(cv_trj_i)
 
-
-    delta_T=15*T
-    omega = 0.1
+    #MTD params
+    delta_T=dG_ts/kB - T
+    omega = 0.1*np.sqrt(np.e)
     tau = np.max(taus)
-    t_frame=tau/10
     t_gaussian=tau
 
-    return delta_T, sigma, omega, t_frame, t_gaussian
+    #WE parameters, see 'WE review' overleaf document
+    walkers_per_bin=4
+    bin_width = sigma*np.sqrt(2*kB*T/dG_ts) #note that this is an array
+    t_we = tau*kB*T/dG_ts
+
+    if t_we > t_gaussian:
+        print(f"Warning: MTD interval ({t_gaussian}) exceeds WE interval ({t_we}), probable input error")
+
+    #frame save interval
+    t_frame=t_we/5
+
+    #how much potential to deposit each WE round (t_we) so that the deposition rate equals the rate you would get if you deposited a gaussian of height omega every t_gaussian
+    #before accounting for the fact that well-tempering makes this like compouding interest at different intervals
+    we_omega = omega*t_we/t_gaussian
+
+
+    return delta_T, sigma, omega, we_omega, t_gaussian, walkers_per_bin, bin_width, t_we, t_frame

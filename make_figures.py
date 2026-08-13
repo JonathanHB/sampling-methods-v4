@@ -44,7 +44,7 @@ def multiplot_observable_convergence(observables_all_crt, condition_names, timep
     """
 
     #create plot
-    fig, ax = plt.subplots(len(observables_all_crt), sharex='col', figsize=(5,10))
+    fig, ax = plt.subplots(len(observables_all_crt)+1, sharex='col', figsize=(5,10))
 
     #loop over conditions
     for i, (observables_all_rt, timepoints_all_rt, condition_name) in enumerate(zip(observables_all_crt, timepoints_all_crt, condition_names)):
@@ -53,6 +53,7 @@ def multiplot_observable_convergence(observables_all_crt, condition_names, timep
             for we_i in range(int(np.ceil(max(timepoints_all_crt.flatten())/we_round_lengths[i]))):
                 #print(f"we round = {we_i}")
                 #print(f"we round time = {we_i*we_round_lengths[i]}")
+                
                 ax[i].axvline(we_i*we_round_lengths[i], color="black", linewidth=0.1)
                 #ax[i].axvline(10, color="black", linestyle="dotted")
 

@@ -57,7 +57,8 @@ class we_mtd_simulator:
         self.we_params = we_params
         self.mtd_params = mtd_params
         self.energy_landscape = energy_landscape
-        self.we_round_length = self.we_params["n_gaussians_per_round"]*self.mtd_params["n_frames_per_gaussian"]*self.mtd_params["n_steps_per_frame"]*self.mtd_params["dt"]
+        self.we_round_length = self.we_params["t_we"]
+        #self.we_params["n_gaussians_per_round"]*self.mtd_params["n_frames_per_gaussian"]*self.mtd_params["n_steps_per_frame"]*self.mtd_params["dt"]
 
 
     def run(self):

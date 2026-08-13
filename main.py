@@ -37,7 +37,7 @@ def multiplot_main_variable_WE():
     simulation_system = energy_landscapes.cv0_2well_2d_system
 
     #general parameters
-    n_replicates = 5
+    n_replicates = 1
     n_timepoints = 100
     v_inherit=True
 
@@ -45,7 +45,7 @@ def multiplot_main_variable_WE():
     T=1
 
     #timescales
-    dt=0.005
+    dt=0.001
     
     n_gpus = 32
     t_wall = 200
@@ -57,20 +57,22 @@ def multiplot_main_variable_WE():
 
     #MTD parameters
     #TODO look at the original well-tempered MTD paper and what it says about how to set parameters, specifically delta T
-    delta_T, sigma, omega, t_frame, t_gaussian = set_params.set_mtd_params_from_unbiased_literature_advice(simulation_system, kB, T, CV, dt, n_frames=10000)
+    delta_T, sigma, omega, we_omega, t_gaussian, walkers_per_bin, bin_width, t_we, t_frame = set_params.set_mtd_params_from_unbiased_literature_advice(simulation_system, kB, T, CV, dt, n_frames=10000, dG_ts = 10*kB*T)
 
-    print("t_f, t_g")
-    print(t_frame, t_gaussian)
+    print("t_f, t_we, t_g")
+    print(t_frame, t_we, t_gaussian)
+
+    print("bin width:", bin_width)
 
     n_steps_per_frame = int(round(t_frame/dt))
     print(f"n_steps_per_frame={n_steps_per_frame}")
 
-    n_frames_per_gaussian = int(round(t_gaussian/t_frame))
-    print(f"n_frames_per_gaussian={n_frames_per_gaussian}")
+    n_frames_per_we_gaussian = int(round(t_we/t_frame))
+    print(f"n_frames_per_we_gaussian={n_frames_per_we_gaussian}")
 
     mtd_params = {'dt': dt, 
                   'n_steps_per_frame': n_steps_per_frame, 
-                  'n_frames_per_gaussian': n_frames_per_gaussian, 
+                  'n_frames_per_gaussian': n_frames_per_we_gaussian, 
                   'delta_T': delta_T, 'sigma': sigma, 'omega': omega, 
                   'CV': CV, 
                   'v_inherit': v_inherit}
@@ -78,31 +80,39 @@ def multiplot_main_variable_WE():
     macrostate_classifier = collective_variables.macrostate_classifier_coord0_eq0
 
     #WE parameters
-    walkers_per_bin = 6
-    n_we_bins = 100
+    # walkers_per_bin = 6
+    # n_we_bins = 100
     # if t_molecular/t_gaussian < 100:
     #     print(f"gaussian deposition interval is only {t_gaussian/t_molecular} of the molecular time, \
     #           so we can't test the sampling scheme as intended")
     #     return None
-        
-    max_n_gaussians_per_round = int(round(t_wall/t_gaussian))
-    t_we_round = t_gaussian*max_n_gaussians_per_round*np.array([1, 1/4, 1/16, 1/64, 1/256, 1/1024, 1/4096])
 
-    max_we_rounds = int(round(max_t_molecular/t_we_round.min()))
+    
+        
+    # max_n_gaussians_per_round = int(round(t_wall/t_gaussian))
+    #t_we = t_gaussian*max_n_gaussians_per_round*np.array([1, 1/4, 1/16, 1/64, 1/256, 1/1024, 1/4096])
+
+    max_we_rounds = int(round(max_t_molecular/t_we))
 
     #np.linspace(t_gaussian, t_molecular, 5)
 
     #initialize systems
 
+
+
+    #at some point we'll dispense with the max() and make this an array for 2d binners
+    n_we_bins = int(np.max(np.round(np.divide(CV.cv_max-CV.cv_min, bin_width))))
+
     #we_round_lengths = []
 
     simulator_objects = []
-    for t_we_i in t_we_round:
+    for t_we_i in [t_we]:
         #we_round_lengths.append(int(round(t_we_i/t_gaussian)))
 
         we_params = {'walkers_per_bin': walkers_per_bin, 
                      'n_we_bins': n_we_bins, 
-                     'n_gaussians_per_round': int(round(t_we_i/t_gaussian)), 
+                     'n_gaussians_per_round': 1, 
+                     't_we': t_we_i,
                      't_wall': t_wall,
                      'max_we_rounds': max_we_rounds,
                      'n_gpus': n_gpus,
@@ -131,28 +141,28 @@ def multiplot_main_variable_WE():
     #                 plottitle = "Macrostate delta G for variable WE interval", 
     #                 true_value = 0)
 
-    serial = "9_cv_exact_inh_100bins"#1_cv_exact_noinh_100bins"
+    serial = "10"#1_cv_exact_noinh_100bins"
 
     #plot results
     make_figures.multiplot_observable_convergence(observables_all_crt = conditions_replicate_time, 
-                    condition_names = [f'$t_{{WE}}$={t_we_i:.2f}' for t_we_i in t_we_round], 
+                    condition_names = [f'$t_{{WE}}$={t_we_i:.2f}' for t_we_i in [t_we]], 
                     timepoints_all_crt = timepoints, 
                     time_axis_label = "molecular time", 
                     savetitle = f"Macrostate delta G for variable WE interval molecular time v{serial}",
-                    plottitle = f"$\Delta G_{{mac}}(t_{{WE}})$ vs $t_{{mol}}$ \n $V_{{inherit}}=${v_inherit}", 
+                    plottitle = f"$\\Delta G_{{mac}}(t_{{WE}})$ vs $t_{{mol}}$ \n $V_{{inherit}}=${v_inherit}", 
                     true_value = 0,
-                    we_round_lengths = t_we_round, 
-                    plot_we_boundaries=True)
+                    we_round_lengths = [t_we], 
+                    plot_we_boundaries=False)
 
     #plot results
     make_figures.multiplot_observable_convergence(observables_all_crt = conditions_replicate_time2, 
-                    condition_names = [f'$t_{{WE}}$={t_we_i:.2f}' for t_we_i in t_we_round], 
+                    condition_names = [f'$t_{{WE}}$={t_we_i:.2f}' for t_we_i in [t_we]], 
                     timepoints_all_crt = timepoints2, 
                     time_axis_label = "aggregate time",
                     savetitle = f"Macrostate delta G for variable WE interval aggregate time v{serial}", 
-                    plottitle = f"$\Delta G_{{mac}}(t_{{WE}})$ vs $t_{{agg}}$ \n $V_{{inherit}}=${v_inherit}", 
+                    plottitle = f"$\\Delta G_{{mac}}(t_{{WE}})$ vs $t_{{agg}}$ \n $V_{{inherit}}=${v_inherit}", 
                     true_value = 0,
-                    we_round_lengths = t_we_round)
+                    we_round_lengths = [t_we])
 
 
 #TODO write a variant that saves the run output in a numpy file and another variant that loads them 
