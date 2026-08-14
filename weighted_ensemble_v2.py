@@ -48,8 +48,13 @@ def resample(w, b, walkerdata_transposed, walkers_per_bin):
         w_out += [new_weights] * walkers_per_bin
         walkerdata_out += [walkerdata[nwi] for nwi in new_walker_inds]
 
+    #ensure that weights remain normalized in the face of accumulated floating point errors. 
+    # So far these errors appear to be negligible and cancel out over the long run but this should be more reliable.
+    w_out = np.array(w_out)
+    w_out/=np.sum(w_out)
+
     #reverse the 'transposition' of walker data performed at the start of this function
-    return [np.array(w_out)] + [np.stack([wdi[0] for wdi in walkerdata_out])] + [[wdi[i] for wdi in walkerdata_out] for i in range(1,len(walkerdata_out[0]))]
+    return [w_out] + [np.stack([wdi[0] for wdi in walkerdata_out])] + [[wdi[i] for wdi in walkerdata_out] for i in range(1,len(walkerdata_out[0]))]
 
 
 ###################################################################################################

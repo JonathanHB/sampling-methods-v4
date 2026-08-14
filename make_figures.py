@@ -62,7 +62,7 @@ def multiplot_observable_convergence(observables_all_crt, condition_names, timep
 
             #plot data from each replicate
             #ax[i].scatter(timepoints_all_t, observables_all_t, alpha=0.5)
-            ax[i].plot(timepoints_all_t, observables_all_t, alpha=0.9)
+            ax[i].plot(timepoints_all_t, observables_all_t, alpha=0.7)
             # print(np.isnan(observables_all_t))
             # print(np.where(np.isnan(observables_all_t)))
             # print(timepoints_all_t[np.where(np.isnan(observables_all_t))])
