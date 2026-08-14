@@ -37,7 +37,7 @@ def multiplot_main_variable_WE():
     simulation_system = energy_landscapes.cv0_2well_2d_system
 
     #general parameters
-    n_replicates = 1
+    n_replicates = 3
     n_timepoints = 100
     v_inherit=True
 
@@ -70,12 +70,7 @@ def multiplot_main_variable_WE():
     n_frames_per_we_gaussian = int(round(t_we/t_frame))
     print(f"n_frames_per_we_gaussian={n_frames_per_we_gaussian}")
 
-    mtd_params = {'dt': dt, 
-                  'n_steps_per_frame': n_steps_per_frame, 
-                  'n_frames_per_gaussian': n_frames_per_we_gaussian, 
-                  'delta_T': delta_T, 'sigma': sigma, 'omega': omega, 
-                  'CV': CV, 
-                  'v_inherit': v_inherit}
+
 
     macrostate_classifier = collective_variables.macrostate_classifier_coord0_eq0
 
@@ -106,18 +101,78 @@ def multiplot_main_variable_WE():
     #we_round_lengths = []
 
     simulator_objects = []
-    for t_we_i in [t_we]:
+    for i in range(4): #t_we_i in [t_we]:
         #we_round_lengths.append(int(round(t_we_i/t_gaussian)))
+        #WE+MTD
+        if i == 0:
+            mtd_params = {'dt': dt, 
+                        'n_steps_per_frame': n_steps_per_frame, 
+                        'n_frames_per_gaussian': n_frames_per_we_gaussian, 
+                        'delta_T': delta_T, 'sigma': sigma, 'omega': omega, 
+                        'CV': CV, 
+                        'v_inherit': v_inherit}
+            we_params = {'walkers_per_bin': walkers_per_bin, 
+                        'n_we_bins': n_we_bins, 
+                        'n_gaussians_per_round': 1, 
+                        't_we': t_we,
+                        't_wall': t_wall,
+                        'max_we_rounds': max_we_rounds,
+                        'n_gpus': n_gpus,
+                        'CV': CV, 'macrostate_classifier': macrostate_classifier
+                        }
+        #MTD
+        elif i == 1:
+            mtd_params = {'dt': dt, 
+                        'n_steps_per_frame': n_steps_per_frame, 
+                        'n_frames_per_gaussian': n_frames_per_we_gaussian, 
+                        'delta_T': delta_T, 'sigma': sigma, 'omega': omega, 
+                        'CV': CV, 
+                        'v_inherit': v_inherit}
+            we_params = {'walkers_per_bin': walkers_per_bin, 
+                        'n_we_bins': n_we_bins, 
+                        'n_gaussians_per_round': max_we_rounds,
+                        't_we': t_we,
+                        't_wall': t_wall,
+                        'max_we_rounds': 1,
+                        'n_gpus': n_gpus,
+                        'CV': CV, 'macrostate_classifier': macrostate_classifier
+                        }
+        #WE
+        if i == 2:
+            mtd_params = {'dt': dt, 
+                        'n_steps_per_frame': n_steps_per_frame, 
+                        'n_frames_per_gaussian': n_frames_per_we_gaussian, 
+                        'delta_T': delta_T, 'sigma': sigma, 'omega': 0, 
+                        'CV': CV, 
+                        'v_inherit': v_inherit}
+            we_params = {'walkers_per_bin': walkers_per_bin, 
+                        'n_we_bins': n_we_bins, 
+                        'n_gaussians_per_round': 1, 
+                        't_we': t_we,
+                        't_wall': t_wall,
+                        'max_we_rounds': max_we_rounds,
+                        'n_gpus': n_gpus,
+                        'CV': CV, 'macrostate_classifier': macrostate_classifier
+                        }
 
-        we_params = {'walkers_per_bin': walkers_per_bin, 
-                     'n_we_bins': n_we_bins, 
-                     'n_gaussians_per_round': 1, 
-                     't_we': t_we_i,
-                     't_wall': t_wall,
-                     'max_we_rounds': max_we_rounds,
-                     'n_gpus': n_gpus,
-                     'CV': CV, 'macrostate_classifier': macrostate_classifier
-                     }
+        #unbiased
+        elif i == 3:
+            mtd_params = {'dt': dt, 
+                        'n_steps_per_frame': n_steps_per_frame, 
+                        'n_frames_per_gaussian': n_frames_per_we_gaussian*max_we_rounds, 
+                        'delta_T': delta_T, 'sigma': sigma, 'omega': 0, 
+                        'CV': CV, 
+                        'v_inherit': v_inherit}
+            we_params = {'walkers_per_bin': walkers_per_bin, 
+                        'n_we_bins': n_we_bins, 
+                        'n_gaussians_per_round': 1, 
+                        't_we': t_we,
+                        't_wall': t_wall,
+                        'max_we_rounds': 1,
+                        'n_gpus': n_gpus,
+                        'CV': CV, 'macrostate_classifier': macrostate_classifier
+                        }                   
+                          
         simulator_objects.append(simulator_classes.we_mtd_simulator(kB, T, we_params, mtd_params, simulation_system))
 
     max_analysis_frames = int(round(t_wall/t_frame))
@@ -141,28 +196,28 @@ def multiplot_main_variable_WE():
     #                 plottitle = "Macrostate delta G for variable WE interval", 
     #                 true_value = 0)
 
-    serial = "10"#1_cv_exact_noinh_100bins"
+    serial = "11"#1_cv_exact_noinh_100bins"
 
     #plot results
     make_figures.multiplot_observable_convergence(observables_all_crt = conditions_replicate_time, 
-                    condition_names = [f'$t_{{WE}}$={t_we_i:.2f}' for t_we_i in [t_we]], 
+                    condition_names = ["WE+MTD", "MTD", "WE", "unbiased"],#[f'$t_{{WE}}$={t_we_i:.2f}' for t_we_i in [t_we]], 
                     timepoints_all_crt = timepoints, 
                     time_axis_label = "molecular time", 
                     savetitle = f"Macrostate delta G for variable WE interval molecular time v{serial}",
-                    plottitle = f"$\\Delta G_{{mac}}(t_{{WE}})$ vs $t_{{mol}}$ \n $V_{{inherit}}=${v_inherit}", 
+                    plottitle = f"$\\Delta G_{{mac}}(t_{{WE}})$ vs $t_{{mol}}$", # \n $V_{{inherit}}=${v_inherit}
                     true_value = 0,
-                    we_round_lengths = [t_we], 
+                    we_round_lengths = [t_we, t_we*max_we_rounds], 
                     plot_we_boundaries=False)
 
     #plot results
     make_figures.multiplot_observable_convergence(observables_all_crt = conditions_replicate_time2, 
-                    condition_names = [f'$t_{{WE}}$={t_we_i:.2f}' for t_we_i in [t_we]], 
+                    condition_names = ["WE+MTD", "MTD", "WE", "unbiased"], #[f'$t_{{WE}}$={t_we_i:.2f}' for t_we_i in [t_we]], 
                     timepoints_all_crt = timepoints2, 
                     time_axis_label = "aggregate time",
                     savetitle = f"Macrostate delta G for variable WE interval aggregate time v{serial}", 
-                    plottitle = f"$\\Delta G_{{mac}}(t_{{WE}})$ vs $t_{{agg}}$ \n $V_{{inherit}}=${v_inherit}", 
+                    plottitle = f"$\\Delta G_{{mac}}(t_{{WE}})$ vs $t_{{agg}}$", # \n $V_{{inherit}}=${v_inherit}
                     true_value = 0,
-                    we_round_lengths = [t_we])
+                    we_round_lengths = [t_we, t_we*max_we_rounds])
 
 
 #TODO write a variant that saves the run output in a numpy file and another variant that loads them 

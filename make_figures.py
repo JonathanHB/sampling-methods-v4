@@ -44,7 +44,7 @@ def multiplot_observable_convergence(observables_all_crt, condition_names, timep
     """
 
     #create plot
-    fig, ax = plt.subplots(len(observables_all_crt)+1, sharex='col', figsize=(5,10))
+    fig, ax = plt.subplots(len(observables_all_crt), sharex='col', figsize=(5,10))
 
     #loop over conditions
     for i, (observables_all_rt, timepoints_all_rt, condition_name) in enumerate(zip(observables_all_crt, timepoints_all_crt, condition_names)):

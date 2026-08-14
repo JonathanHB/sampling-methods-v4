@@ -34,25 +34,28 @@ To do list
     implement binless correlation time calculation (on hold: and see if it matches MSM)
 8. Done: adjust WE intervals
 9. Done: update plotter to plot at fixed molecular time intervals regardless of WE interval (give each frame a timestamp or something)
-
 10. Mostly Done; see below: rewrite time + step -setting code to use a fixed wall clock time and fixed number of gpus 
+11. On hold; not observed lately: fix analysis so that the aggregate time doesn't vary so drastically (or at least figure out why it does)
+    Done? in estimate_observables: #TODO: track wall clock time as you go and cut off estimation once you hit the limit
+12: Done: functions to estimate FE as a function of wall clock time and aggregate time
+13. Done: inherited potential
+#--------------------------------------------------------------------------------------
 
-11. fix analysis so that the aggregate time doesn't vary so drastically (or at least figure out why it does)
-    in estimate_observables: #TODO: track wall clock time as you go and cut off estimation once you hit the limit
-11.5: functions to estimate FE as a function of wall clock time and aggregate time
+14. Done: unit test for shared potential propagator
+15.1. Done for now, check back later: clean up WE contents
+15.2. Plot MTD potential vs true potential at various time intervals
+16. new resampler
+17. look into whether WE enables faster gaussian deposition by making it smoother
 
-12: add code to plot FE landscapes for each replicate at the last frame (within t_wall)
-13. inherited potential
+18. figure out what the diffusion coefficient means in the case of uniform diffusion coefficients and 1d CVs (it appears that it may be equivalent to changing the timestep in that case)
+19. rewrite test_free_energy_on_cv_grid() in test_propagators_grid.py to use an analytically solvable case instead of another implementation of the same calculation
 
-11. write a macrostate free energy difference calculator
+20.1. write a plotter to show FE estimate evolution over time and some WE diagnostics like the bin population probability
+20.2: add code to plot FE landscapes for each replicate at the last frame (within t_wall)
 
-12. write a plotter to show FE estimate evolution over time and some WE diagnostics like the bin population probability
-
+21. write a macrostate free energy difference calculator to get the true value
 
 Low priority
-
-99. figure out what the diffusion coefficient means in the case of uniform diffusion coefficients and 1d CVs (it appears that it may be equivalent to changing the timestep in that case)
-100. rewrite test_free_energy_on_cv_grid() in test_propagators_grid.py to use an analytically solvable case instead of another implementation of the same calculation
 
 
 
