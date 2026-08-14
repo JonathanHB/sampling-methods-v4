@@ -12,10 +12,57 @@ import matplotlib.pyplot as plt
 
 from propagators_grid import propagate
 from propagators_grid import propagate_shared_grid
+import visualization
 # import propagators_v1
 # import utility_v1
 # import MSM_methods
 
+
+###################################################################################################
+#                                      MSM RESAMPLER
+
+def msm_resample(w, b, walkerdata_transposed, walkers_per_bin):
+
+    #effectively transpose the walkerdata so that the first index is the walker rather than the attribute (i.e. bin, ensemble)
+    #using numpy transposition here would not work because the coordinates are themselves arrays while other attributes are scalars
+    walkerdata = [list(row) for row in zip(*walkerdata_transposed)]
+    #keep weights from going to 0
+    split_limit = 2.00001*sys.float_info.min 
+
+    inds_by_bin = [[] for _ in range(max(b)+1)]  #list of lists; each sublist contains the indices of walkers in the corresponding bin
+    for walker_ind, bin_ind in enumerate(b):
+        inds_by_bin[bin_ind].append(walker_ind)
+
+    # weights and other walker information for each walker produced by the splitting/merging process (including unaltered ones)
+    w_out = []
+    walkerdata_out = []
+
+    for ib in np.unique(b):
+        bin_inds = np.where(b==ib)[0]
+        bin_weights = w[bin_inds]
+
+        new_walker_inds = random.choices(bin_inds, weights=bin_weights, k=walkers_per_bin)
+
+        new_weights = np.sum(bin_weights)/walkers_per_bin
+        w_out += [new_weights] * walkers_per_bin
+        walkerdata_out += [walkerdata[nwi] for nwi in new_walker_inds]
+
+    #ensure that weights remain normalized in the face of accumulated floating point errors. 
+    # So far these errors appear to be negligible and cancel out over the long run but this should be more reliable.
+    w_out = np.array(w_out)
+    w_out/=np.sum(w_out)
+
+    #reverse the 'transposition' of walker data performed at the start of this function
+    return [w_out] + [np.stack([wdi[0] for wdi in walkerdata_out])] + [[wdi[i] for wdi in walkerdata_out] for i in range(1,len(walkerdata_out[0]))]
+
+
+
+###################################################################################################
+#                                      NULL RESAMPLER
+#                  for non-WE simulations using a consistent software framework
+#return the inputs unchanged
+def null_resample(w, b, walkerdata_transposed, walkers_per_bin):
+    return [w]+walkerdata_transposed
 
 
 ###################################################################################################
@@ -266,6 +313,7 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
     n_gpu_rounds = 0
 
     bin_pops = np.zeros((nrounds, config_binner.n_bins))
+    bin_we_weights = np.zeros((nrounds, config_binner.n_bins))
 
     observables = []
     w_max = []
@@ -292,9 +340,10 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
 
         #Calculate configurational bins
         cb_md = config_binner.bin(x_md)
-        for cb_md_i in cb_md:
+        for cb_md_i, w_i in zip(cb_md, w):
             bin_pops[r,cb_md_i]+=1
-
+            bin_we_weights[r,cb_md_i]+=w_i
+            
         #Determine which ensemble each walker belongs to based on the new coordinates or configurational bins and the last ensembles.
         # This need not use both x_md and cb_md; both are included to support different ensemble_classifier objects.
         e_md = ensemble_classifier.ensemble(x_md, cb_md, e_last)
@@ -309,14 +358,24 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
         n_gpu_rounds += len(x)/n_gpus #int(np.ceil(len(x)/n_gpus)) #note that this does not account for small additional costs if the number of walkers is not a multiple of the number of gpus
         if n_gpu_rounds >= n_gpu_rounds_t_wall:
             print(f"reached the maximum number of gpu (and hence WE) rounds permitted by the WE round length, number of GPUs, and wall clock time limit {n_gpu_rounds} >= {n_gpu_rounds_t_wall} after {r} WE rounds")
+
+            rmax = 2000
+            visualization.plot_masked_energies(data=bin_pops[0:rmax].transpose(), xlims=[0,rmax], ylims=[0,config_binner.n_bins], plot_shape=[16,8], aspect_ratio=10/4, vmax=10, labels=["WE round", "bin"])
+
+            visualization.plot_masked_energies(data=bin_we_weights[0:rmax].transpose(), xlims=[0,rmax], ylims=[0,config_binner.n_bins], plot_shape=[16,8], aspect_ratio=10/4, vmax=0.1, labels=["WE round", "bin"])
+
+            # import sys
+            # sys.exit(0)
+
+
             # plt.plot(np.average(mtd_data[1][:,-1], axis=0, weights = w))
-            plt.show()
-            plt.plot(w_max)
-            plt.show()
-            plt.figure(figsize=(10, 20)) 
-            plt.imshow(bin_pops[:r+1], interpolation='none')
-            #plt.colorbar()
-            plt.show()
+            # plt.show()
+            # plt.plot(w_max)
+            # plt.show()
+            # plt.figure(figsize=(10, 20)) 
+            # plt.imshow(bin_pops[:r+1], interpolation='none')
+            # #plt.colorbar()
+            # plt.show()
 
             # print(bin_pops[:r+1])
             # print(np.min(bin_pops[:r+1]))

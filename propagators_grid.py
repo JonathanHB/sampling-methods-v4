@@ -1,7 +1,9 @@
 import itertools
 import numpy as np
 from typing import Callable
-
+import numba
+from numba import njit
+import time
 
 #TODO: we seem to be missing a parameter to describe the relative influence of noise and gradient descent
 
@@ -300,7 +302,7 @@ def propagate(G: Callable[[np.ndarray], np.ndarray],
 
 #written by claude sonnet 5 at medium effort on 7/29/26
 #a version of propagators_function_spec.py was uploaded with the prompt
-
+#@njit
 def propagate_shared_grid(G: Callable[[np.ndarray], np.ndarray],
               kB: float,
               T: float,
@@ -429,6 +431,8 @@ def propagate_shared_grid(G: Callable[[np.ndarray], np.ndarray],
         The MTD importance weights for each walker at each saved frame.
     
     """
+
+    t0 = time.time()
 
     init_coords = np.asarray(init_coords, dtype=float)
     init_potentials = np.asarray(init_potentials, dtype=float)
@@ -592,6 +596,9 @@ def propagate_shared_grid(G: Callable[[np.ndarray], np.ndarray],
         # print(fields.shape)
 
         potentials[g, ...] = V_grid
+
+    t1 = time.time()
+    #print(f"time = {t1-t0}")
 
     return trajectories, potentials, mtd_weights
 
