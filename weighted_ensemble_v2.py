@@ -21,8 +21,15 @@ import visualization
 ###################################################################################################
 #                                      MSM RESAMPLER
 
-def msm_resample(w, b, walkerdata_transposed, walkers_per_bin):
+def msm_resample(w, b, walkerdata_transposed, walkers_per_bin, cumulative_transitions):
+    """
+    Resample the walkers and reweight all the bins using a markov state model built from all data up to this point,
+    using unbiased data. A forthcoming method will attempt to reweight using dTRAM once we have adjusted the 
+    MTD gaussian deposition to occur only every n rounds.
+    In the case that there are multiple disconnected sets of states, 
+    build a MSM for each one and redistribute the weight within it, leaving the total for each disconnected set the same.
 
+    """
     #effectively transpose the walkerdata so that the first index is the walker rather than the attribute (i.e. bin, ensemble)
     #using numpy transposition here would not work because the coordinates are themselves arrays while other attributes are scalars
     walkerdata = [list(row) for row in zip(*walkerdata_transposed)]
@@ -317,6 +324,7 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
 
     observables = []
     w_max = []
+    transitions = [] #list of numpy arrays, 1 array per WE round. Elements are bin indices.
 
     for r in range(nrounds):
         # #print a note every 1/10th of the way there
@@ -351,6 +359,8 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
         #Determine which bin each walker belongs to based on the new coordinates or configurational bins and its current ensemble.
         # For non-history-augmented binning schemes e is unused and this simply returns the configurational bins cb_md.
         b_md = binner.bin(cb_md, e_md)
+
+        transitions.append(np.stack((b_last, b_md)))
 
         #Calculate total bin occupancies, MSM transitions, and/or whatever other observables are desired
         observables.append(calc_observables(x_last, x_md, e_last, e_md, w, cb_last, cb_md, b_last, b_md, propagator, mtd_data))
