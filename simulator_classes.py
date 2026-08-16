@@ -131,7 +131,7 @@ class we_mtd_simulator:
 
         x, e, w, cb, b, propagator, observables = weighted_ensemble_v2.weighted_ensemble(x, e, w, cb, b, 
                                                                                          propagator0, 
-                                                                                         weighted_ensemble_v2.split_merge, 
+                                                                                         weighted_ensemble_v2.resample, 
                                                                                          config_binner, 
                                                                                          ensemble_classifier, 
                                                                                          binner, 

@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 
 #written by copilot
@@ -70,4 +71,28 @@ def plot_G_surface(G, x_limits, n=200, center=None, slice_axis=0, name=""):
     plt.tight_layout()
     if name != "":
         plt.savefig(f"figures/{name}.png", dpi=600)
+    plt.show()
+
+
+#see the following stackoverfow posts: 
+# https://stackoverflow.com/questions/22548813/python-color-map-but-with-all-zero-values-mapped-to-black
+# https://stackoverflow.com/questions/56062299/how-to-add-axis-labels-to-imshow-plots-in-python
+# https://stackoverflow.com/questions/13384653/imshow-extent-and-aspect
+
+def plot_masked_energies(data, xlims, ylims, plot_shape, aspect_ratio, vmax, labels):
+
+    # mask 'bad' regions with no sampling
+    masked_rfe = np.ma.masked_where(data == 0, data)
+
+    #set color mapping for regions with sampling
+    cmap = mpl.colormaps.get_cmap("viridis").copy()
+
+    #set color for 'bad' regions with no sampling
+    cmap.set_bad(color='grey')
+
+    plt.figure(figsize=plot_shape)
+    plt.xlabel(labels[0])
+    plt.ylabel(labels[1])
+
+    im = plt.imshow(masked_rfe, interpolation='none', cmap=cmap, extent = [xlims[0], xlims[1], ylims[0], ylims[1]], aspect = aspect_ratio, vmax=vmax, origin="lower")
     plt.show()

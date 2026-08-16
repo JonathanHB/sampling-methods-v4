@@ -128,13 +128,13 @@ def set_mtd_params_from_unbiased_literature_advice(simulation_system, kB, T, CV,
     #WE parameters, see 'WE review' overleaf document
     walkers_per_bin=4
     bin_width = sigma*np.sqrt(2*kB*T/dG_ts) #note that this is an array
-    t_we = tau*kB*T/dG_ts
+    t_we = tau*(1/4)*kB*T/dG_ts
 
     if t_we > t_gaussian:
         print(f"Warning: MTD interval ({t_gaussian}) exceeds WE interval ({t_we}), probable input error")
 
     #frame save interval
-    t_frame=t_we/5
+    t_frame=t_we
 
     #how much potential to deposit each WE round (t_we) so that the deposition rate equals the rate you would get if you deposited a gaussian of height omega every t_gaussian
     #before accounting for the fact that well-tempering makes this like compouding interest at different intervals

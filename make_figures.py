@@ -44,7 +44,7 @@ def multiplot_observable_convergence(observables_all_crt, condition_names, timep
     """
 
     #create plot
-    fig, ax = plt.subplots(len(observables_all_crt)+1, sharex='col', figsize=(5,10))
+    fig, ax = plt.subplots(len(observables_all_crt), sharex='col', figsize=(5,10))
 
     #loop over conditions
     for i, (observables_all_rt, timepoints_all_rt, condition_name) in enumerate(zip(observables_all_crt, timepoints_all_crt, condition_names)):
@@ -62,7 +62,7 @@ def multiplot_observable_convergence(observables_all_crt, condition_names, timep
 
             #plot data from each replicate
             #ax[i].scatter(timepoints_all_t, observables_all_t, alpha=0.5)
-            ax[i].plot(timepoints_all_t, observables_all_t, alpha=0.9)
+            ax[i].plot(timepoints_all_t, observables_all_t, alpha=0.7)
             # print(np.isnan(observables_all_t))
             # print(np.where(np.isnan(observables_all_t)))
             # print(timepoints_all_t[np.where(np.isnan(observables_all_t))])
