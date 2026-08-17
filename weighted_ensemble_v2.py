@@ -18,49 +18,73 @@ import visualization
 # import MSM_methods
 
 
+
+
 ###################################################################################################
 #                                      MSM RESAMPLER
 
-def msm_resample(w, b, walkerdata_transposed, walkers_per_bin, cumulative_transitions):
+def tram_reweight(cumulative_transitions_weights, w, b, walkers_per_bin, last_potential):
     """
-    Resample the walkers and reweight all the bins using a markov state model built from all data up to this point,
-    using unbiased data. A forthcoming method will attempt to reweight using dTRAM once we have adjusted the 
-    MTD gaussian deposition to occur only every n rounds.
+    Reweight weighted ensemble walkers using TRAM (https://deeptime-ml.github.io/latest/notebooks/tram.html).
     In the case that there are multiple disconnected sets of states, 
-    build a MSM for each one and redistribute the weight within it, leaving the total for each disconnected set the same.
+    build a MSM for each one and redistribute the weight within it, 
+    leaving the total for each disconnected set the same.
+
+    Parameters
+    ----------
+    cumulative_transitions_weights: list of numpy arrays
+    Each array is of shape (4, number of walkers in round i). 
+    The indices along axis 0 are:
+    0: the transition starting bin
+    1: transition ending bin
+    2: the MTD importance weight in the starting bin
+    3: the MTD importance weight in the ending bin
+
+    w: numpy array of floats
+    The WE weight of each current walker, needed only if there are multiple disconnected sets of states
+
+    b: numpy array of ints
+    The bin occupied by each current walker. These indices should be one larger than the corresponding MTD potential grid indices 
+    (b[i]=0 corresponds to a walker off the left edge of the MTD grid, at a MTD potential of zero)
+
+    walkers_per_bin: int
+    Target number of walkers per bin, technically inferrable from the count of each index in b but that's ugly
+
+    last_potential: numpy array of floats
+    of n_CV_dim dimensions
+    The current MTD potential, for calculating WE weights
+
+    Returns
+    -------
+    w_out: numpy array of floats
+    The new WE weights of the current walkers, calculated as described below
 
     """
-    #effectively transpose the walkerdata so that the first index is the walker rather than the attribute (i.e. bin, ensemble)
-    #using numpy transposition here would not work because the coordinates are themselves arrays while other attributes are scalars
-    walkerdata = [list(row) for row in zip(*walkerdata_transposed)]
-    #keep weights from going to 0
-    split_limit = 2.00001*sys.float_info.min 
 
-    inds_by_bin = [[] for _ in range(max(b)+1)]  #list of lists; each sublist contains the indices of walkers in the corresponding bin
-    for walker_ind, bin_ind in enumerate(b):
-        inds_by_bin[bin_ind].append(walker_ind)
+    ##########################################################
+    # 1. USE DTRAM TO ESTIMATE THE EQUILIBRIUM BIN PROBABILITIES
 
-    # weights and other walker information for each walker produced by the splitting/merging process (including unaltered ones)
-    w_out = []
-    walkerdata_out = []
+    #This section should use:
+    # cumulative_transitions_weights
+    # w only if there are multiple disconnected sets of states
 
-    for ib in np.unique(b):
-        bin_inds = np.where(b==ib)[0]
-        bin_weights = w[bin_inds]
 
-        new_walker_inds = random.choices(bin_inds, weights=bin_weights, k=walkers_per_bin)
+    ##########################################################
+    #2. ADJUST WEIGHTED ENSEMBLE WEIGHTS ACCORDINGLY
+    # accounting for the current MTD potential
+    #i.e. 
+    # if the MTD potential is zero, the WE weights equal the unbiased probabilities divided by the number of bins
+    # if the MTD potential equals the true potential (i.e. the energy wells are all filled in), the WE weights are all equal
+    
+    #this section should use:
+    # the unbiased bin probabilities from section 1
+    # b
+    # last_potential
 
-        new_weights = np.sum(bin_weights)/walkers_per_bin
-        w_out += [new_weights] * walkers_per_bin
-        walkerdata_out += [walkerdata[nwi] for nwi in new_walker_inds]
 
-    #ensure that weights remain normalized in the face of accumulated floating point errors. 
-    # So far these errors appear to be negligible and cancel out over the long run but this should be more reliable.
-    w_out = np.array(w_out)
-    w_out/=np.sum(w_out)
+    w_out = np.zeros(len(b))
 
-    #reverse the 'transposition' of walker data performed at the start of this function
-    return [w_out] + [np.stack([wdi[0] for wdi in walkerdata_out])] + [[wdi[i] for wdi in walkerdata_out] for i in range(1,len(walkerdata_out[0]))]
+    return w_out
 
 
 
@@ -81,8 +105,6 @@ def resample(w, b, walkerdata_transposed, walkers_per_bin):
     #effectively transpose the walkerdata so that the first index is the walker rather than the attribute (i.e. bin, ensemble)
     #using numpy transposition here would not work because the coordinates are themselves arrays while other attributes are scalars
     walkerdata = [list(row) for row in zip(*walkerdata_transposed)]
-    #keep weights from going to 0
-    split_limit = 2.00001*sys.float_info.min 
 
     inds_by_bin = [[] for _ in range(max(b)+1)]  #list of lists; each sublist contains the indices of walkers in the corresponding bin
     for walker_ind, bin_ind in enumerate(b):
@@ -102,180 +124,16 @@ def resample(w, b, walkerdata_transposed, walkers_per_bin):
         w_out += [new_weights] * walkers_per_bin
         walkerdata_out += [walkerdata[nwi] for nwi in new_walker_inds]
 
+
     #ensure that weights remain normalized in the face of accumulated floating point errors. 
     # So far these errors appear to be negligible and cancel out over the long run but this should be more reliable.
     w_out = np.array(w_out)
     w_out/=np.sum(w_out)
 
     #reverse the 'transposition' of walker data performed at the start of this function
-    return [w_out] + [np.stack([wdi[0] for wdi in walkerdata_out])] + [[wdi[i] for wdi in walkerdata_out] for i in range(1,len(walkerdata_out[0]))]
+    return [w_out] + [np.stack([wdi[0] for wdi in walkerdata_out])] + [np.array([wdi[i] for wdi in walkerdata_out]) for i in range(1,len(walkerdata_out[0]))]
 
 
-###################################################################################################
-#                                      MERGING AND SPLITTING
-
-#TODO: check resampling scheme in westpa 2.0 in case it's changed
-#TODO: this function seems too long; can it be refactored?
-
-#split and merge walkers to ensure that each bin has the target number of walkers
-#parameters
-# w = walker weights
-# b = walker bins (either configurational or history augmented depending on the choice of binner)
-# walkerdata_transposed = a tuple of walker-level parameters other than the weights 
-#     (since the weights are modified by this function and then added later for output)
-#     this contains redundant bin information but including that makes the code cleaner
-# walkers_per_bin = target number of walkers per bin
-#returns
-# a tuple of weights, bins, and the other walker parameters from walkerdata_transposed, for the new set of split/merged walkers
-
-def split_merge(w, b, walkerdata_transposed, walkers_per_bin):
-
-    # excess_walkers = len(w)-n_gpus #added by JHB on 8/5/26 
-
-    printdebug = False
-
-    #this stops walkers with weights above this threshold from merging even it would leave a bin overpopulated, selecting lighter ones where possible
-    #it's basically anti-trust legislation for WE walkers
-    maxweight = False
-    if maxweight:
-        merge_threshold = 0.05
-
-    #a list of length n_total_walkers
-    #using numpy transposition here would not work because the coordinates are themselves arrays while other attributes are scalars
-    walkerdata = [list(row) for row in zip(*walkerdata_transposed)]
-    split_limit = 2.00001*sys.float_info.min #keep weights from going to 0
-    #print(f"bins: {b}")
-    inds_by_bin = [[] for _ in range(max(b)+1)]  #list of lists; each sublist contains the indices of walkers in the corresponding bin
-    for walker_ind, bin_ind in enumerate(b):
-        inds_by_bin[bin_ind].append(walker_ind)
-
-    
-    # weights and other walker information for each walker produced by the splitting/merging process (including unaltered ones)
-    w_out = []
-    walkerdata_out = []
-
-    for isi, indset in enumerate(inds_by_bin):
-
-        if printdebug:
-            print(f"--------------------{isi}---------------------")
-            for i in indset:
-                print(walkerdata[i]+[w[i]])
-        
-        #continue simulations in bins with the right population
-        if len(indset) == walkers_per_bin:
-            for i in indset:
-                walkerdata_out.append(walkerdata[i])
-                w_out.append(w[i])
-            
-
-        #duplicate simulations in bins with too few walkers
-        elif len(indset) < walkers_per_bin and len(indset) > 0:
-
-            #select walkers to duplicate
-            w_indset = [w[i] for i in indset]
-            duplicated_walkers = random.choices(indset, weights=w_indset, k = walkers_per_bin-len(indset))
-            
-            #add coordinates and weights of walkers from this bin to the list for next round
-            # coordinates are unchanged for duplicated walkers; weights are reduced
-            for i in indset:
-                #add multiple copies of walkers to be duplicated with proportionally smaller weights
-                for j in range(1+duplicated_walkers.count(i)):
-                    walkerdata_out.append(walkerdata[i])
-
-                    if w[i] >= split_limit:
-                        #this is the normal WE algorithm
-                        w_out.append(w[i]/(1+duplicated_walkers.count(i)))
-                        # if j>0: #added 8/5/26
-                        #     #this is for the new setting which avoids going below n_gpus walkers
-                        #     excess_walkers+=1 
-                    else:
-                        w_out.append(w[i])
-                        break #do not duplicate too-light walkers
-
-
-        #merge simulations in bins with too many walkers
-        elif len(indset) > walkers_per_bin: # and excess_walkers > 0:
-
-            #total bin weight; does not change because merging operations preserve weight
-            w_bin = sum([w[i] for i in indset])
-        
-            #deepcopy; may be unnecessary
-            local_indset = [i for i in indset]
-            w_local_indset = [w[i] for i in indset]
-
-            #TODO: why does this need to be done with a loop instead of choosing multiple things without replacement? 
-            # Does it have to do with the weighting function used to determine what to remove?
-            #remove walkers until only walkers_per_bin remain
-            for i in range(len(indset)-walkers_per_bin):
-                
-                #weights for walker elimination from Huber and Kim 1996 appendix A
-                w_removal = [(w_bin - w[i])/w_bin for i in local_indset]
-
-                #-------------------------------------experimental--------------------------------------------------
-                if maxweight:
-                    #print("update line marked WEIGHTCAP")
-                    w_removal_masked = [wr if wli < merge_threshold else 0 for wli, wr in zip(w_local_indset, w_removal)]
-                    if sum(w_removal_masked) == 0:
-                        print(w_local_indset)
-                        continue
-                #---------------------------------------------------------------------------------------
-                
-                #pick 1 walker to remove, most likely one with a low weight
-                #the [0] eliminates an unnecessary list layer
-                if not maxweight:
-                    removed_walker = random.choices([j for j in range(len(local_indset))], weights=w_removal, k = 1)[0] #WEIGHTCAP: w_removal >>> w_removal_masked
-                else:
-                    removed_walker = random.choices([j for j in range(len(local_indset))], weights=w_removal_masked, k = 1)[0]
-
-                #remove the walker
-                local_indset = [i for ii, i in enumerate(local_indset) if ii != removed_walker]
-                removed_weight = w_local_indset[removed_walker]
-                w_local_indset = [i for ii, i in enumerate(w_local_indset) if ii != removed_walker]
-
-                # #this is for the new setting which avoids going below n_gpus walkers
-                # excess_walkers-=1 #added 8/5/26
-
-                #-------------------------------------experimental--------------------------------------------------
-                if maxweight:
-                    #print("update line marked WEIGHTCAP")
-                    w_local_indset_masked = [wli if wli < merge_threshold else 0 for wli in w_local_indset]
-                    if sum(w_local_indset_masked) == 0:
-                        print(w_local_indset)
-                        continue
-                #---------------------------------------------------------------------------------------
-
-                #pick another walker to gain the removed walker's probability
-                #selection chance is proportional to existing weight
-                if not maxweight:
-                    recipient_walker = random.choices([j for j in range(len(local_indset))], weights=w_local_indset, k = 1)[0] #WEIGHTCAP: w_local_indset >>> w_local_indset_masked
-                else:
-                    recipient_walker = random.choices([j for j in range(len(local_indset))], weights=w_local_indset_masked, k = 1)[0] #WEIGHTCAP: w_local_indset >>> w_local_indset_masked
-                
-                #transfer the removed walker's weight
-                w_local_indset[recipient_walker] += removed_weight
-
-            #add the remaining walkers with updated weights to the output list
-            for i in range(walkers_per_bin):
-                walkerdata_out.append(walkerdata[local_indset[i]])
-                w_out.append(w_local_indset[i])
-
-
-    #combine data for new walkers into a consistent list of lists and arrays
-    outputs_all = [w_out] + [np.stack([wdi[0] for wdi in walkerdata_out])] + [[wdi[i] for wdi in walkerdata_out] for i in range(1,len(walkerdata_out[0]))]
-
-
-    #----------------------------------debugging-------------------------------------------
-    if printdebug:
-        walkerdata2 = [list(row) for row in zip(*outputs_all)]
-        print("                        outputs")
-        for b in range(max(b)+1):
-            print(f"--------------------{b}---------------------")
-            for wdi in walkerdata2:
-                if wdi[4] == b:
-                    print(wdi)
-
-
-    return outputs_all
 
 
 #PARAMETERS
@@ -309,13 +167,14 @@ def split_merge(w, b, walkerdata_transposed, walkers_per_bin):
 # propagator: the propagator class after the last WE round, which may have updated its metadynamics grid but is otherwise unchanged
 # observables: a list of the observables calculated at each WE round
 
-def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ensemble_classifier, binner, calc_observables, nrounds, walkers_per_bin, n_gpu_rounds_t_wall, n_gpus):
+def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ensemble_classifier, binner, calc_observables, nrounds, n_rounds_per_gaussian, walkers_per_bin, n_gpu_rounds_t_wall, n_gpus):
 
     x = x.copy()    #positions and/or MSM state indices for trajectories generated by an MSM
     e = e.copy()    #ensembles for history augmented analysis
     w = w.copy()    #WE weights
     cb = cb.copy()  #configurational bin indices for MSM analysis
     b = b.copy()    #bin indices for haMSM analysis
+    w_mtd = np.ones(len(x))
 
     n_gpu_rounds = 0
 
@@ -325,6 +184,8 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
     observables = []
     w_max = []
     transitions = [] #list of numpy arrays, 1 array per WE round. Elements are bin indices.
+
+    deposit = 0
 
     for r in range(nrounds):
         # #print a note every 1/10th of the way there
@@ -336,7 +197,20 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
         e_last = e.copy()
         cb_last = cb.copy()
         b_last = b.copy()
+        w_mtd_last = w_mtd.copy()
 
+        deposit_last = deposit
+        deposit = 0
+        if n_rounds_per_gaussian == 1:
+            deposit = 1
+        elif n_rounds_per_gaussian > 1 and r > 0 and r % n_rounds_per_gaussian == 0:
+            deposit = 1
+        elif config_binner.n_bins == 1:
+            deposit = 1
+
+        print(config_binner.n_bins)
+        print(f"deposit = {deposit}")
+    
         #Propagate dynamics
         # beware that this propagator modifies x in place
         # w is only passed in because it may be used to update metadynamics grids
@@ -344,10 +218,13 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
         # certain observables have to be computed after the trajectory is propagated 
         # but before the propagator updates other internal variables like the metadynamics grid
         # these are returned in propagator_outputs
-        x_md, mtd_data = propagator.propagate(x, w)
+        x_md, mtd_data = propagator.propagate(x, w, deposit)
+
+        w_mtd_md = mtd_data[2][:,-1]
 
         #Calculate configurational bins
         cb_md = config_binner.bin(x_md)
+
         for cb_md_i, w_i in zip(cb_md, w):
             bin_pops[r,cb_md_i]+=1
             bin_we_weights[r,cb_md_i]+=w_i
@@ -360,7 +237,13 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
         # For non-history-augmented binning schemes e is unused and this simply returns the configurational bins cb_md.
         b_md = binner.bin(cb_md, e_md)
 
-        transitions.append(np.stack((b_last, b_md)))
+        if deposit_last != 1:
+            # print(b_last.shape)
+            # print(b_md.shape)
+            # print(w_mtd_last.shape)
+            # print(mtd_data[2].shape)
+            # print(mtd_data[2][:,-1].shape)
+            transitions.append(np.stack((b_last, b_md, w_mtd_last, w_mtd_md)))
 
         #Calculate total bin occupancies, MSM transitions, and/or whatever other observables are desired
         observables.append(calc_observables(x_last, x_md, e_last, e_md, w, cb_last, cb_md, b_last, b_md, propagator, mtd_data))
@@ -370,8 +253,9 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
             print(f"reached the maximum number of gpu (and hence WE) rounds permitted by the WE round length, number of GPUs, and wall clock time limit {n_gpu_rounds} >= {n_gpu_rounds_t_wall} after {r} WE rounds")
 
             rmax = 2000
+            #walker distribution
             visualization.plot_masked_energies(data=bin_pops[0:rmax].transpose(), xlims=[0,rmax], ylims=[0,config_binner.n_bins], plot_shape=[16,8], aspect_ratio=10/4, vmax=10, labels=["WE round", "bin"])
-
+            #weight distribution
             visualization.plot_masked_energies(data=bin_we_weights[0:rmax].transpose(), xlims=[0,rmax], ylims=[0,config_binner.n_bins], plot_shape=[16,8], aspect_ratio=10/4, vmax=0.1, labels=["WE round", "bin"])
 
             # import sys
@@ -404,8 +288,12 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
 
         w_max.append(max(w)) #these diagnostics belong in the observables
 
-        #Split and merge trajectories
-        (w, x, e, b, cb) = resampler(w, b_md, (x_md, e_md, b_md, cb_md), walkers_per_bin)
+        if r < nrounds-1:
+            #Split and merge trajectories
+            (w, x, e, b, cb, w_mtd) = resampler(w, b_md, (x_md, e_md, b_md, cb_md, w_mtd_md), walkers_per_bin)
+            #if deposit == 1:
+            #    w = msm_resample(transitions, b_md, walkers_per_bin, mtd_data[1][-1]) #the last argument is the most recent MTD potential
+
 
 
     #return the final coordinates, ensembles, weights, bins, propagator (for metadynamics purposes when it is modified) and observables
@@ -431,7 +319,7 @@ class we_propagator_2():
         self.CV = mtd_params["CV"] #to simplify referencing
         self.potential = np.zeros(self.CV.grid_n)
 
-    def propagate(self, x, w):
+    def propagate(self, x, w, deposit):
 
         traj, pots, weights = propagate_shared_grid(
             G=self.system.G, kB=self.kB, T = self.T, dt=self.mtd_params["dt"], xi = self.system.xi, 
@@ -439,7 +327,7 @@ class we_propagator_2():
             steps_per_saved_frame=self.mtd_params["n_steps_per_frame"],
             n_gaussians=self.n_gaussians_per_round, 
             frames_per_gaussian=self.mtd_params["n_frames_per_gaussian"],
-            sigma=self.mtd_params["sigma"], omega=self.mtd_params["omega"], delta_T=self.mtd_params["delta_T"],
+            sigma=self.mtd_params["sigma"], omega=self.mtd_params["omega"]*deposit, delta_T=self.mtd_params["delta_T"],
             CV=self.CV.cv_funct, grad_CV=self.CV.cv_grad_funct, 
             cv_min=self.CV.cv_min, cv_max=self.CV.cv_max
         )

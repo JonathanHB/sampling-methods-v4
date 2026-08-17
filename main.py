@@ -57,7 +57,7 @@ def multiplot_main_variable_WE():
 
     #MTD parameters
     #TODO look at the original well-tempered MTD paper and what it says about how to set parameters, specifically delta T
-    delta_T, sigma, omega, we_omega, t_gaussian, walkers_per_bin, bin_width, t_we, t_frame = set_params.set_mtd_params_from_unbiased_literature_advice(simulation_system, kB, T, CV, dt, n_frames=10000, dG_ts = 10*kB*T)
+    delta_T, sigma, omega, t_gaussian, walkers_per_bin, bin_width, t_we, t_frame = set_params.set_mtd_params_from_unbiased_literature_advice(simulation_system, kB, T, CV, dt, n_frames=10000, dG_ts = 10*kB*T)
 
     print("t_f, t_we, t_g")
     print(t_frame, t_we, t_gaussian)
@@ -67,10 +67,17 @@ def multiplot_main_variable_WE():
     n_steps_per_frame = int(round(t_frame/dt))
     print(f"n_steps_per_frame={n_steps_per_frame}")
 
+    n_frames_per_gaussian = int(round(t_gaussian/t_frame))
+    print(f"n_frames_per_gaussian={n_frames_per_gaussian}")
+
     n_frames_per_we_gaussian = int(round(t_we/t_frame))
     print(f"n_frames_per_we_gaussian={n_frames_per_we_gaussian}")
 
+    n_we_rounds_per_gaussian = int(round(t_gaussian/t_we))
+    print(f"n_we_rounds_per_gaussian={n_we_rounds_per_gaussian}")
 
+    omega_wemtd = omega*n_we_rounds_per_gaussian*t_we/t_gaussian
+    print(f"omega = {omega}, omega_wemtd = {omega_wemtd}")
 
     macrostate_classifier = collective_variables.macrostate_classifier_coord0_eq0
 
@@ -81,13 +88,13 @@ def multiplot_main_variable_WE():
     #     print(f"gaussian deposition interval is only {t_gaussian/t_molecular} of the molecular time, \
     #           so we can't test the sampling scheme as intended")
     #     return None
-
-    
         
     # max_n_gaussians_per_round = int(round(t_wall/t_gaussian))
     #t_we = t_gaussian*max_n_gaussians_per_round*np.array([1, 1/4, 1/16, 1/64, 1/256, 1/1024, 1/4096])
 
     max_we_rounds = int(round(max_t_molecular/t_we))
+    max_gaussians = int(round(max_t_molecular/t_gaussian))
+    max_frames = int(round(max_t_molecular/t_frame))
 
     #np.linspace(t_gaussian, t_molecular, 5)
 
@@ -96,66 +103,61 @@ def multiplot_main_variable_WE():
     #at some point we'll dispense with the max() and make this an array for compatibility with 2d binners
     n_we_bins = int(np.max(np.round(np.divide(CV.cv_max-CV.cv_min, bin_width))))
 
-    #we_round_lengths = []
+    #use MTD grid resolution matching the WE bins
+    #CV.grid_n = n_we_bins
+    #simulation_system.grid
+
+    print(f"using {n_we_bins} bins for both WE and MTD grid")
+
 
     simulator_objects = []
-    for i in range(4): #t_we_i in [t_we]:
-        #we_round_lengths.append(int(round(t_we_i/t_gaussian)))
+    for i in range(1):
 
         #WE+MTD
         if i == 0:
             mtd_params = {'dt': dt, 
                         'n_steps_per_frame': n_steps_per_frame, 
                         'n_frames_per_gaussian': n_frames_per_we_gaussian, 
-                        'delta_T': delta_T, 'sigma': sigma, 'omega': omega, 
+                        'delta_T': delta_T, 'sigma': sigma, 'omega': omega_wemtd, 
                         'CV': CV, 
-                        'v_inherit': v_inherit}
+                        'v_inherit': v_inherit
+                        }
             we_params = {'walkers_per_bin': walkers_per_bin, 
                         'n_we_bins': n_we_bins, 
-                        'n_gaussians_per_round': 1, 
+                        'n_gaussians_per_round': 1,
+                        'n_we_rounds_per_gaussian': n_we_rounds_per_gaussian, 
                         't_we': t_we,
                         't_wall': t_wall,
                         'max_we_rounds': max_we_rounds,
                         'n_gpus': n_gpus,
                         'CV': CV, 'macrostate_classifier': macrostate_classifier
                         }
+
             
         #MTD
         elif i == 1:
             mtd_params = {'dt': dt, 
                         'n_steps_per_frame': n_steps_per_frame, 
-                        'n_frames_per_gaussian': n_frames_per_we_gaussian, 
+                        'n_frames_per_gaussian': n_frames_per_gaussian, 
                         'delta_T': delta_T, 'sigma': sigma, 'omega': omega, 
                         'CV': CV, 
-                        'v_inherit': v_inherit}
-            we_params = {'walkers_per_bin': walkers_per_bin, 
-                        'n_we_bins': n_we_bins, 
-                        'n_gaussians_per_round': max_we_rounds,
+                        'v_inherit': v_inherit
+                        }
+            we_params = {'walkers_per_bin': -1, 
+                        'n_we_bins': -1, 
+                        'n_gaussians_per_round': max_gaussians, 
+                        'n_we_rounds_per_gaussian': n_we_rounds_per_gaussian, 
                         't_we': t_we,
                         't_wall': t_wall,
                         'max_we_rounds': 1,
                         'n_gpus': n_gpus,
                         'CV': CV, 'macrostate_classifier': macrostate_classifier
-                        }
-            
-        # #MTD implemented differently
-        # elif i == 2:
-        #     mtd_params = {'dt': dt, 
-        #                 'n_steps_per_frame': n_steps_per_frame, 
-        #                 'n_frames_per_gaussian': n_frames_per_we_gaussian, 
-        #                 'delta_T': delta_T, 'sigma': sigma, 'omega': omega, 
-        #                 'CV': CV, 
-        #                 'v_inherit': v_inherit}
-        #     we_params = {'walkers_per_bin': walkers_per_bin, 
-        #                 'n_we_bins': n_we_bins, 
-        #                 'n_gaussians_per_round': 1,
-        #                 't_we': t_we,
-        #                 't_wall': t_wall,
-        #                 'max_we_rounds': max_we_rounds,
-        #                 'n_gpus': n_gpus,
-        #                 'CV': CV, 'macrostate_classifier': macrostate_classifier
-        #                 }
-            
+                        }  
+            #simulator_objects.append(simulator_classes.we_mtd_simulator(kB, T, we_params, mtd_params, simulation_system))
+  
+            #simulator_objects.append(simulator_classes.mtd_simulator(kB, T, mtd_params, max_gaussians, n_gpus, simulation_system))
+
+
         #WE
         if i == 2:
             mtd_params = {'dt': dt, 
@@ -163,36 +165,43 @@ def multiplot_main_variable_WE():
                         'n_frames_per_gaussian': n_frames_per_we_gaussian, 
                         'delta_T': delta_T, 'sigma': sigma, 'omega': 0, 
                         'CV': CV, 
-                        'v_inherit': v_inherit}
+                        'v_inherit': v_inherit
+                        }
             we_params = {'walkers_per_bin': walkers_per_bin, 
                         'n_we_bins': n_we_bins, 
                         'n_gaussians_per_round': 1, 
+                        'n_we_rounds_per_gaussian': n_we_rounds_per_gaussian, 
                         't_we': t_we,
                         't_wall': t_wall,
                         'max_we_rounds': max_we_rounds,
                         'n_gpus': n_gpus,
                         'CV': CV, 'macrostate_classifier': macrostate_classifier
                         }
+            #simulator_objects.append(simulator_classes.we_mtd_simulator(kB, T, we_params, mtd_params, simulation_system))
+
 
         #unbiased
         elif i == 3:
             mtd_params = {'dt': dt, 
                         'n_steps_per_frame': n_steps_per_frame, 
-                        'n_frames_per_gaussian': n_frames_per_we_gaussian*max_we_rounds, 
+                        'n_frames_per_gaussian': max_frames, 
                         'delta_T': delta_T, 'sigma': sigma, 'omega': 0, 
                         'CV': CV, 
-                        'v_inherit': v_inherit}
-            we_params = {'walkers_per_bin': walkers_per_bin, 
-                        'n_we_bins': n_we_bins, 
+                        'v_inherit': v_inherit
+                        }
+            we_params = {'walkers_per_bin': -1, 
+                        'n_we_bins': -1, 
                         'n_gaussians_per_round': 1, 
+                        'n_we_rounds_per_gaussian': n_we_rounds_per_gaussian, 
                         't_we': t_we,
                         't_wall': t_wall,
                         'max_we_rounds': 1,
                         'n_gpus': n_gpus,
                         'CV': CV, 'macrostate_classifier': macrostate_classifier
                         }                   
-                          
+
         simulator_objects.append(simulator_classes.we_mtd_simulator(kB, T, we_params, mtd_params, simulation_system))
+                          
 
 
     max_analysis_frames = int(round(t_wall/t_frame))

@@ -121,7 +121,7 @@ def set_mtd_params_from_unbiased_literature_advice(simulation_system, kB, T, CV,
 
     #MTD params
     delta_T=dG_ts/kB - T
-    omega = 0.1*np.sqrt(np.e)
+    omega = 1 #0.1*np.sqrt(np.e)
     tau = np.max(taus)
     t_gaussian=tau
 
@@ -138,7 +138,7 @@ def set_mtd_params_from_unbiased_literature_advice(simulation_system, kB, T, CV,
 
     #how much potential to deposit each WE round (t_we) so that the deposition rate equals the rate you would get if you deposited a gaussian of height omega every t_gaussian
     #before accounting for the fact that well-tempering makes this like compouding interest at different intervals
-    we_omega = omega*t_we/t_gaussian
+    #we_omega = omega*t_we/t_gaussian
 
 
-    return delta_T, sigma, omega, we_omega, t_gaussian, walkers_per_bin, bin_width, t_we, t_frame
+    return delta_T, sigma, omega, t_gaussian, walkers_per_bin, bin_width, t_we, t_frame
