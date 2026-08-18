@@ -23,7 +23,53 @@ import visualization
 ###################################################################################################
 #                                      MSM RESAMPLER
 
-def tram_reweight(cumulative_transitions_weights, w, b, walkers_per_bin, last_potential):
+def tram_unbiased_energies(transitions, potential_functions, kT):
+    """
+    Calculate unbiased free energies of bins using TRAM (https://deeptime-ml.github.io/latest/notebooks/tram.html).
+
+    Parameters
+    ----------
+    transitions: list of 2d numpy arrays of floats
+    Each array has a first axis of length 2 and a variable second axis length depending on the number of walkers in that round
+    Each column of the array is a transition. The element in the first row is the index of the starting bin, 
+    and the element in the second row is the index of the ending bin
+    
+    potential_functions: list of n_CV_dimensions - dimensional numpy arrays of floats
+    Each array is the metadynamics grid containing the metadynamics potential when a particular set of transitions occurred
+    The length of this is the number of thermodynamic states
+
+    kT: float
+    Boltzmann's constant times temperature
+
+    
+    Returns
+    -------
+    bins: 1d numpy array of ints
+    Indices of the the bins for which TRAM potentials could be estimated
+
+    energies: 1d numpy array of floats
+    Potential energies for each of the above bins
+
+    """
+
+    #to implement TRAM with the provided arguments:
+    # concatenate all the transitions into a single array of shape (total_n_transitions, 2)
+    # make the 3d bias_matrices array, indexing potential_functions to get the potential of every sample in every state. 
+    # because there are not the same number of samples in all states, some elements of this array will be meaningless.
+    # I'm not sure of the top of my head what value to put for those elements.
+
+    return bins, energies
+
+
+#THIS is on hold because the bias matrix required for tram grows quadratically with trajectory length 
+# because its size includes the number of thermodynamic states in one dimension times the number of frames in the other
+#as of this writing we're talking about matrices of size ~300 states * 300 states * 120 bins * 4 walkers per bin * 40 rounds per state = 1.7 billion elements for my toy system
+#worse yet if you reweight at equally spaced intervals (thereby summing quadratic-cost operations), the total cost grows cubically
+#in theory if the prefactor of this cost is not too large this might still be a small cost relative to simulation, 
+# but I'm going to focus on more scalable approaches for the moment.
+
+#The current arguments for this are wrong (i.e. they do not contain all the required information for dTRAM)
+def tram_reweight(transitions, w, b, walkers_per_bin, last_potential):
     """
     Reweight weighted ensemble walkers using TRAM (https://deeptime-ml.github.io/latest/notebooks/tram.html).
     In the case that there are multiple disconnected sets of states, 
@@ -184,7 +230,9 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
     observables = []
     w_max = []
     transitions = [] #list of numpy arrays, 1 array per WE round. Elements are bin indices.
+    potential_functions = [] #list of numpy arrays, 1 array per WE round. Elements are potential energies.
 
+    #whether MTD potential is being deposited on the current round
     deposit = 0
 
     for r in range(nrounds):
@@ -243,7 +291,9 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
             # print(w_mtd_last.shape)
             # print(mtd_data[2].shape)
             # print(mtd_data[2][:,-1].shape)
-            transitions.append(np.stack((b_last, b_md, w_mtd_last, w_mtd_md)))
+            #transitions.append(np.stack((b_last, b_md, w_mtd_last, w_mtd_md)))
+            transitions.append(np.stack((b_last, b_md)))
+            potential_functions.append(mtd_data[1][-1])
 
         #Calculate total bin occupancies, MSM transitions, and/or whatever other observables are desired
         observables.append(calc_observables(x_last, x_md, e_last, e_md, w, cb_last, cb_md, b_last, b_md, propagator, mtd_data))

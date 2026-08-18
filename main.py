@@ -104,7 +104,7 @@ def multiplot_main_variable_WE():
     n_we_bins = int(np.max(np.round(np.divide(CV.cv_max-CV.cv_min, bin_width))))
 
     #use MTD grid resolution matching the WE bins
-    #CV.grid_n = n_we_bins
+    CV.grid_n = n_we_bins
     #simulation_system.grid
 
     print(f"using {n_we_bins} bins for both WE and MTD grid")

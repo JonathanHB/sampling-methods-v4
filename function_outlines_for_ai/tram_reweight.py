@@ -1,12 +1,14 @@
 import numpy as np
 #add deeptime imports here
 
+###################################################################################################
+#                                      MSM RESAMPLER
+
 def tram_reweight(cumulative_transitions_weights, w, b, walkers_per_bin, last_potential):
     """
     Reweight weighted ensemble walkers using TRAM (https://deeptime-ml.github.io/latest/notebooks/tram.html).
     In the case that there are multiple disconnected sets of states, 
-    build a MSM for each one and redistribute the weight within it, 
-    leaving the total for each disconnected set the same.
+    redistribute the weight within each, leaving the total for each disconnected set the same.
 
     Parameters
     ----------
