@@ -13,6 +13,8 @@ import matplotlib.pyplot as plt
 from propagators_grid import propagate
 from propagators_grid import propagate_shared_grid
 import visualization
+
+import msm_reweight
 # import propagators_v1
 # import utility_v1
 # import MSM_methods
@@ -21,125 +23,11 @@ import visualization
 
 
 ###################################################################################################
-#                                      MSM RESAMPLER
-
-def tram_unbiased_energies(transitions, potential_functions, kT):
-    """
-    Calculate unbiased free energies of bins using TRAM (https://deeptime-ml.github.io/latest/notebooks/tram.html).
-
-    Parameters
-    ----------
-    transitions: list of 2d numpy arrays of floats
-    Each array has a first axis of length 2 and a variable second axis length depending on the number of walkers in that round
-    Each column of the array is a transition. The element in the first row is the index of the starting bin, 
-    and the element in the second row is the index of the ending bin
-    
-    potential_functions: list of n_CV_dimensions - dimensional numpy arrays of floats
-    Each array is the metadynamics grid containing the metadynamics potential when a particular set of transitions occurred
-    The length of this is the number of thermodynamic states
-
-    kT: float
-    Boltzmann's constant times temperature
-
-    
-    Returns
-    -------
-    bins: 1d numpy array of ints
-    Indices of the the bins for which TRAM potentials could be estimated
-
-    energies: 1d numpy array of floats
-    Potential energies for each of the above bins
-
-    """
-
-    #to implement TRAM with the provided arguments:
-    # concatenate all the transitions into a single array of shape (total_n_transitions, 2)
-    # make the 3d bias_matrices array, indexing potential_functions to get the potential of every sample in every state. 
-    # because there are not the same number of samples in all states, some elements of this array will be meaningless.
-    # I'm not sure of the top of my head what value to put for those elements.
-
-    return bins, energies
-
-
-#THIS is on hold because the bias matrix required for tram grows quadratically with trajectory length 
-# because its size includes the number of thermodynamic states in one dimension times the number of frames in the other
-#as of this writing we're talking about matrices of size ~300 states * 300 states * 120 bins * 4 walkers per bin * 40 rounds per state = 1.7 billion elements for my toy system
-#worse yet if you reweight at equally spaced intervals (thereby summing quadratic-cost operations), the total cost grows cubically
-#in theory if the prefactor of this cost is not too large this might still be a small cost relative to simulation, 
-# but I'm going to focus on more scalable approaches for the moment.
-
-#The current arguments for this are wrong (i.e. they do not contain all the required information for dTRAM)
-def tram_reweight(transitions, w, b, walkers_per_bin, last_potential):
-    """
-    Reweight weighted ensemble walkers using TRAM (https://deeptime-ml.github.io/latest/notebooks/tram.html).
-    In the case that there are multiple disconnected sets of states, 
-    build a MSM for each one and redistribute the weight within it, 
-    leaving the total for each disconnected set the same.
-
-    Parameters
-    ----------
-    cumulative_transitions_weights: list of numpy arrays
-    Each array is of shape (4, number of walkers in round i). 
-    The indices along axis 0 are:
-    0: the transition starting bin
-    1: transition ending bin
-    2: the MTD importance weight in the starting bin
-    3: the MTD importance weight in the ending bin
-
-    w: numpy array of floats
-    The WE weight of each current walker, needed only if there are multiple disconnected sets of states
-
-    b: numpy array of ints
-    The bin occupied by each current walker. These indices should be one larger than the corresponding MTD potential grid indices 
-    (b[i]=0 corresponds to a walker off the left edge of the MTD grid, at a MTD potential of zero)
-
-    walkers_per_bin: int
-    Target number of walkers per bin, technically inferrable from the count of each index in b but that's ugly
-
-    last_potential: numpy array of floats
-    of n_CV_dim dimensions
-    The current MTD potential, for calculating WE weights
-
-    Returns
-    -------
-    w_out: numpy array of floats
-    The new WE weights of the current walkers, calculated as described below
-
-    """
-
-    ##########################################################
-    # 1. USE DTRAM TO ESTIMATE THE EQUILIBRIUM BIN PROBABILITIES
-
-    #This section should use:
-    # cumulative_transitions_weights
-    # w only if there are multiple disconnected sets of states
-
-
-    ##########################################################
-    #2. ADJUST WEIGHTED ENSEMBLE WEIGHTS ACCORDINGLY
-    # accounting for the current MTD potential
-    #i.e. 
-    # if the MTD potential is zero, the WE weights equal the unbiased probabilities divided by the number of bins
-    # if the MTD potential equals the true potential (i.e. the energy wells are all filled in), the WE weights are all equal
-    
-    #this section should use:
-    # the unbiased bin probabilities from section 1
-    # b
-    # last_potential
-
-
-    w_out = np.zeros(len(b))
-
-    return w_out
-
-
-
-###################################################################################################
 #                                      NULL RESAMPLER
 #                  for non-WE simulations using a consistent software framework
 #return the inputs unchanged
 def null_resample(w, b, walkerdata_transposed, walkers_per_bin):
-    return [w]+walkerdata_transposed
+    return [w]+list(walkerdata_transposed)
 
 
 ###################################################################################################
@@ -236,9 +124,11 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
     deposit = 0
 
     for r in range(nrounds):
-        # #print a note every 1/10th of the way there
-        # if r%max(round(nrounds/10), 1) == 0:
-        #     print(f"WE round {r}")
+        # print(r)
+        # print(np.sum(w))
+        #print a note every 1/10th of the way there
+        if r%max(round(nrounds/20), 1) == 0:
+            print(f"WE round {r}")
 
         #deepcopy variables for observable calculation (i.e. to get transitions)
         x_last = x.copy()
@@ -256,8 +146,8 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
         elif config_binner.n_bins == 1:
             deposit = 1
 
-        print(config_binner.n_bins)
-        print(f"deposit = {deposit}")
+        #print(config_binner.n_bins)
+        #print(f"deposit = {deposit}")
     
         #Propagate dynamics
         # beware that this propagator modifies x in place
@@ -292,7 +182,7 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
             # print(mtd_data[2].shape)
             # print(mtd_data[2][:,-1].shape)
             #transitions.append(np.stack((b_last, b_md, w_mtd_last, w_mtd_md)))
-            transitions.append(np.stack((b_last, b_md)))
+            transitions.append(np.stack((b_last, b_md, w)))
             potential_functions.append(mtd_data[1][-1])
 
         #Calculate total bin occupancies, MSM transitions, and/or whatever other observables are desired
@@ -307,6 +197,7 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
             visualization.plot_masked_energies(data=bin_pops[0:rmax].transpose(), xlims=[0,rmax], ylims=[0,config_binner.n_bins], plot_shape=[16,8], aspect_ratio=10/4, vmax=10, labels=["WE round", "bin"])
             #weight distribution
             visualization.plot_masked_energies(data=bin_we_weights[0:rmax].transpose(), xlims=[0,rmax], ylims=[0,config_binner.n_bins], plot_shape=[16,8], aspect_ratio=10/4, vmax=0.1, labels=["WE round", "bin"])
+            visualization.plot_masked_energies(data=bin_we_weights[rmax:2*rmax].transpose(), xlims=[rmax,2*rmax], ylims=[0,config_binner.n_bins], plot_shape=[16,8], aspect_ratio=10/4, vmax=0.1, labels=["WE round", "bin"])
 
             # import sys
             # sys.exit(0)
@@ -341,9 +232,18 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
         if r < nrounds-1:
             #Split and merge trajectories
             (w, x, e, b, cb, w_mtd) = resampler(w, b_md, (x_md, e_md, b_md, cb_md, w_mtd_md), walkers_per_bin)
-            #if deposit == 1:
-            #    w = msm_resample(transitions, b_md, walkers_per_bin, mtd_data[1][-1]) #the last argument is the most recent MTD potential
 
+            # test_tram_energy_est=False
+            # if deposit == 1 and test_tram_energy_est:
+            #     print(f"round {r}")
+            #     tram_energies_v3_implemented.tram_unbiased_energies(transitions, potential_functions, propagator.kB * propagator.T)
+
+            test_msm_reweight = True
+            if deposit == 1 and test_msm_reweight and walkers_per_bin > 0:
+                #msm_energy(transitions, )
+                #, mtd_data[1][-1] the last argument is the most recent MTD potential
+                w = msm_reweight.msm_reweight(transitions, w, b, walkers_per_bin, r, n_rounds_per_gaussian)
+                transitions = []
 
 
     #return the final coordinates, ensembles, weights, bins, propagator (for metadynamics purposes when it is modified) and observables

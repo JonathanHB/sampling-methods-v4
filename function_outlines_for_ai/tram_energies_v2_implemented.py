@@ -3,7 +3,9 @@ import numpy as np
 # TRAM is provided by deeptime.
 from deeptime.markov.msm import TRAM, TRAMDataset
 
+import matplotlib.pyplot as plt
 
+#written by chatgpt on 8/17/26 using tram_energies_v2.py
 def tram_unbiased_energies(transitions, potential_functions, kT):
     """
     Calculate unbiased free energies of bins using TRAM.
@@ -45,6 +47,8 @@ def tram_unbiased_energies(transitions, potential_functions, kT):
     deeptime expects dimensionless bias energies (in units of kT), so the
     supplied potentials are divided by kT before constructing the TRAM data.
     """
+
+    print("running TRAM")
 
     # -----------------------------
     # Validate the input.
@@ -98,6 +102,7 @@ def tram_unbiased_energies(transitions, potential_functions, kT):
     if not any(tr.shape[1] > 0 for tr in transition_arrays):
         raise ValueError("No transitions were supplied.")
 
+
     # -----------------------------
     # Construct TRAM input.
     # -----------------------------
@@ -129,6 +134,7 @@ def tram_unbiased_energies(transitions, potential_functions, kT):
             bias_matrices.append(bias)
             ttrajs.append(np.full(2, therm_state, dtype=np.int32))
 
+
     # -----------------------------
     # Run TRAM.
     # -----------------------------
@@ -144,6 +150,11 @@ def tram_unbiased_energies(transitions, potential_functions, kT):
         lagtime=1,
         count_mode="sample",
     )
+    # print(dtrajs)
+    # print(len(dtrajs))
+    # print([dti.shape for dti in dtrajs])
+    # print(len(bias_matrices))
+    # print([bmi.shape for bmi in bias_matrices])
 
     # TRAM needs a connected state space to determine relative free energies.
     # Restrict to the largest connected set based on the summed transition
@@ -160,37 +171,65 @@ def tram_unbiased_energies(transitions, potential_functions, kT):
     )
     model = tram.fit_fetch(dataset)
 
+
     # -----------------------------
-    # Extract the unbiased PMF.
+    # Extract the unbiased free energies.
     # -----------------------------
-    # model.compute_PMF() returns a dimensionless PMF, i.e. -log(probability),
-    # for the unbiased/reference state (therm_state=-1).  Use the original
-    # Markov-state labels as the bin labels.
-    connected_bins = np.asarray(dataset.dtrajs, dtype=object)
-    bins = np.unique(np.concatenate(connected_bins)).astype(np.int64)
+    energies = float(kT) * np.asarray(model.markov_state_energies)
 
-    # The model's connected-state representation is internally compact, while
-    # dataset.dtrajs contains the corresponding original state labels.
-    # Computing the PMF directly from the sample weights avoids assuming that
-    # TRAM's internal state ordering is identical to the original grid labels.
-    sample_weights = model.compute_sample_weights(
-        dataset.dtrajs, dataset.bias_matrices, therm_state=-1
-    )
+    # All thermodynamic-state count models should have the same connected
+    # Markov-state ordering after restrict_to_largest_connected_set().
+    bins = np.asarray(dataset.count_models[0].states, dtype=np.int64)
 
-    # Sum the TRAM weights over samples belonging to each original bin.
-    # This gives p(bin), up to the common normalization already handled by
-    # compute_sample_weights().
-    probability = np.zeros(len(bins), dtype=float)
-    bin_to_position = {int(b): i for i, b in enumerate(bins)}
+    if len(bins) != len(energies):
+        raise RuntimeError(
+            "TRAM returned a different number of Markov-state energies "
+            "than connected bins."
+        )
 
-    for traj, weights in zip(dataset.dtrajs, sample_weights):
-        for state, weight in zip(traj, weights):
-            probability[bin_to_position[int(state)]] += float(weight)
-
-    if np.any(probability <= 0) or not np.all(np.isfinite(probability)):
-        raise RuntimeError("TRAM produced invalid probabilities for the connected bins.")
-
-    energies = -float(kT) * np.log(probability)
+    # Free energies are defined only up to an additive constant.
     energies -= energies.min()
 
+    plt.plot(energies)
+    plt.show()
+
     return bins, energies
+
+
+    # # -----------------------------
+    # # Extract the unbiased PMF.
+    # # -----------------------------
+    # # model.compute_PMF() returns a dimensionless PMF, i.e. -log(probability),
+    # # for the unbiased/reference state (therm_state=-1).  Use the original
+    # # Markov-state labels as the bin labels.
+    # connected_bins = np.asarray(dataset.dtrajs, dtype=object)
+    # bins = np.unique(np.concatenate(connected_bins)).astype(np.int64)
+
+    # # The model's connected-state representation is internally compact, while
+    # # dataset.dtrajs contains the corresponding original state labels.
+    # # Computing the PMF directly from the sample weights avoids assuming that
+    # # TRAM's internal state ordering is identical to the original grid labels.
+    # sample_weights = model.compute_sample_weights(
+    #     dataset.dtrajs, dataset.bias_matrices, therm_state=-1
+    # )
+
+    # # Sum the TRAM weights over samples belonging to each original bin.
+    # # This gives p(bin), up to the common normalization already handled by
+    # # compute_sample_weights().
+    # probability = np.zeros(len(bins), dtype=float)
+    # bin_to_position = {int(b): i for i, b in enumerate(bins)}
+
+    # for traj, weights in zip(dataset.dtrajs, sample_weights):
+    #     for state, weight in zip(traj, weights):
+    #         probability[bin_to_position[int(state)]] += float(weight)
+
+    # if np.any(probability <= 0) or not np.all(np.isfinite(probability)):
+    #     raise RuntimeError("TRAM produced invalid probabilities for the connected bins.")
+
+    # energies = -float(kT) * np.log(probability)
+    # energies -= energies.min()
+
+    # plt.plot(energies)
+    # plt.show()
+
+    # return bins, energies

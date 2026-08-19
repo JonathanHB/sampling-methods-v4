@@ -105,6 +105,11 @@ class we_mtd_simulator:
         binner = weighted_ensemble_v2.binner_1()
         propagator0 = weighted_ensemble_v2.we_propagator_2(self.energy_landscape, self.kB, self.T, self.mtd_params, self.we_params['n_gaussians_per_round'])
 
+        if self.we_params["walkers_per_bin"] != -1:
+            resampler0 = weighted_ensemble_v2.resample
+        elif self.we_params["walkers_per_bin"] == -1:
+            resampler0 = weighted_ensemble_v2.null_resample
+
         #initial state
         x = -np.ones((self.we_params['n_gpus'], self.energy_landscape.n_dim))
         #x0 = np.random.uniform(-1.5, -0.5, size=(n_walkers, sim_system.n_dim))
@@ -132,7 +137,7 @@ class we_mtd_simulator:
 
         x, e, w, cb, b, propagator, observables = weighted_ensemble_v2.weighted_ensemble(x, e, w, cb, b, 
                                                                                          propagator0, 
-                                                                                         weighted_ensemble_v2.resample, 
+                                                                                         resampler0, 
                                                                                          config_binner, 
                                                                                          ensemble_classifier, 
                                                                                          binner, 

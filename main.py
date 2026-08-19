@@ -37,7 +37,7 @@ def multiplot_main_variable_WE():
     simulation_system = energy_landscapes.cv0_2well_2d_system
 
     #general parameters
-    n_replicates = 1
+    n_replicates = 3
     n_timepoints = 100
     v_inherit=True
 
@@ -96,6 +96,8 @@ def multiplot_main_variable_WE():
     max_gaussians = int(round(max_t_molecular/t_gaussian))
     max_frames = int(round(max_t_molecular/t_frame))
 
+    print(f"max_we_rounds = {max_we_rounds}")
+
     #np.linspace(t_gaussian, t_molecular, 5)
 
     #initialize systems
@@ -111,7 +113,7 @@ def multiplot_main_variable_WE():
 
 
     simulator_objects = []
-    for i in range(1):
+    for i in range(4):
 
         #WE+MTD
         if i == 0:
@@ -150,6 +152,26 @@ def multiplot_main_variable_WE():
                         't_we': t_we,
                         't_wall': t_wall,
                         'max_we_rounds': 1,
+                        'n_gpus': n_gpus,
+                        'CV': CV, 'macrostate_classifier': macrostate_classifier
+                        }  
+
+        #MTD with MSM reweighting; which does not work well
+        elif i == 4:
+            mtd_params = {'dt': dt, 
+                        'n_steps_per_frame': n_steps_per_frame, 
+                        'n_frames_per_gaussian': n_frames_per_gaussian, 
+                        'delta_T': delta_T, 'sigma': sigma, 'omega': omega, 
+                        'CV': CV, 
+                        'v_inherit': v_inherit
+                        }
+            we_params = {'walkers_per_bin': -1, 
+                        'n_we_bins': n_we_bins, 
+                        'n_gaussians_per_round': 1, #max_gaussians, 
+                        'n_we_rounds_per_gaussian': n_we_rounds_per_gaussian, 
+                        't_we': t_we,
+                        't_wall': t_wall,
+                        'max_we_rounds': max_we_rounds, #1,
                         'n_gpus': n_gpus,
                         'CV': CV, 'macrostate_classifier': macrostate_classifier
                         }  
@@ -225,7 +247,7 @@ def multiplot_main_variable_WE():
     #                 plottitle = "Macrostate delta G for variable WE interval", 
     #                 true_value = 0)
 
-    serial = "11"#1_cv_exact_noinh_100bins"
+    serial = "12" #"no_msm_reweighting_of_WE"
 
     #plot results
     make_figures.multiplot_observable_convergence(observables_all_crt = conditions_replicate_time, 

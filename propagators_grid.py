@@ -1,8 +1,8 @@
 import itertools
 import numpy as np
 from typing import Callable
-import numba
-from numba import njit
+#import numba
+#from numba import njit
 import time
 
 #TODO: we seem to be missing a parameter to describe the relative influence of noise and gradient descent
