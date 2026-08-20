@@ -123,6 +123,8 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
     #whether MTD potential is being deposited on the current round
     deposit = 0
 
+    test_msm_reweight = False
+
     for r in range(nrounds):
         # print(r)
         # print(np.sum(w))
@@ -193,11 +195,26 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
             print(f"reached the maximum number of gpu (and hence WE) rounds permitted by the WE round length, number of GPUs, and wall clock time limit {n_gpu_rounds} >= {n_gpu_rounds_t_wall} after {r} WE rounds")
 
             rmax = 2000
+
+            if test_msm_reweight:
+                msm_flag = "_reweighted"
+            else:
+                msm_flag = ""
+
             #walker distribution
-            visualization.plot_masked_energies(data=bin_pops[0:rmax].transpose(), xlims=[0,rmax], ylims=[0,config_binner.n_bins], plot_shape=[16,8], aspect_ratio=10/4, vmax=10, labels=["WE round", "bin"])
+            if propagator.mtd_params["omega"] == 0:
+                mtd_flag = ""
+            else:
+                mtd_flag = "+MTD"
+
+            dist_title = f"WE{mtd_flag}_walker_distribution{msm_flag}"
+            weight_title_1 = f"WE{mtd_flag}_weight_distribution_part_1{msm_flag}"
+            weight_title_2 = f"WE{mtd_flag}_weight_distribution_part_2{msm_flag}"
+
+            visualization.plot_masked_energies(data=bin_pops[0:rmax].transpose(), xlims=[0,rmax], ylims=[0,config_binner.n_bins], plot_shape=[16,8], aspect_ratio=10/4, vmax=10, labels=["WE round", "bin"], savefn=dist_title)
             #weight distribution
-            visualization.plot_masked_energies(data=bin_we_weights[0:rmax].transpose(), xlims=[0,rmax], ylims=[0,config_binner.n_bins], plot_shape=[16,8], aspect_ratio=10/4, vmax=0.1, labels=["WE round", "bin"])
-            visualization.plot_masked_energies(data=bin_we_weights[rmax:2*rmax].transpose(), xlims=[rmax,2*rmax], ylims=[0,config_binner.n_bins], plot_shape=[16,8], aspect_ratio=10/4, vmax=0.1, labels=["WE round", "bin"])
+            visualization.plot_masked_energies(data=bin_we_weights[0:rmax].transpose(), xlims=[0,rmax], ylims=[0,config_binner.n_bins], plot_shape=[16,8], aspect_ratio=10/4, vmax=0.1, labels=["WE round", "bin"], savefn=weight_title_1)
+            visualization.plot_masked_energies(data=bin_we_weights[rmax:2*rmax].transpose(), xlims=[rmax,2*rmax], ylims=[0,config_binner.n_bins], plot_shape=[16,8], aspect_ratio=10/4, vmax=0.1, labels=["WE round", "bin"], savefn=weight_title_2)
 
             # import sys
             # sys.exit(0)
@@ -238,7 +255,6 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
             #     print(f"round {r}")
             #     tram_energies_v3_implemented.tram_unbiased_energies(transitions, potential_functions, propagator.kB * propagator.T)
 
-            test_msm_reweight = True
             if deposit == 1 and test_msm_reweight and walkers_per_bin > 0:
                 #msm_energy(transitions, )
                 #, mtd_data[1][-1] the last argument is the most recent MTD potential

@@ -79,7 +79,7 @@ def plot_G_surface(G, x_limits, n=200, center=None, slice_axis=0, name=""):
 # https://stackoverflow.com/questions/56062299/how-to-add-axis-labels-to-imshow-plots-in-python
 # https://stackoverflow.com/questions/13384653/imshow-extent-and-aspect
 
-def plot_masked_energies(data, xlims, ylims, plot_shape, aspect_ratio, vmax, labels):
+def plot_masked_energies(data, xlims, ylims, plot_shape, aspect_ratio, vmax, labels, savefn = ""):
 
     # mask 'bad' regions with no sampling
     masked_rfe = np.ma.masked_where(data == 0, data)
@@ -95,4 +95,8 @@ def plot_masked_energies(data, xlims, ylims, plot_shape, aspect_ratio, vmax, lab
     plt.ylabel(labels[1])
 
     im = plt.imshow(masked_rfe, interpolation='none', cmap=cmap, extent = [xlims[0], xlims[1], ylims[0], ylims[1]], aspect = aspect_ratio, vmax=vmax, origin="lower")
+    if savefn != "":
+        plt.title(savefn)
+        plt.savefig(f"figures/{savefn}.png", dpi=600, bbox_inches="tight")
+
     plt.show()

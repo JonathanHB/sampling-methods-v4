@@ -63,6 +63,9 @@ def multiplot_main_variable_WE():
     print(t_frame, t_we, t_gaussian)
 
     print("bin width:", bin_width)
+    print("gaussian width:", sigma)
+
+    print("tempering factor:", delta_T)
 
     n_steps_per_frame = int(round(t_frame/dt))
     print(f"n_steps_per_frame={n_steps_per_frame}")
