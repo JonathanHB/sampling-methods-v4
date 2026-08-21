@@ -6,6 +6,7 @@ import estimate_observables
 import make_figures
 import energy_landscapes
 import collective_variables
+import collective_variable_analysis
 
 #TODO: fill out an entire project worth of function specs and then give them to Claude and see if it can fill them in
 
@@ -34,7 +35,8 @@ def multiplot_main_variable_WE():
 
     #specify system
     #simulation_system = energy_landscapes.diagonal_2well_2d_system
-    simulation_system = energy_landscapes.cv0_2well_2d_system
+    #simulation_system = energy_landscapes.cv0_2well_2d_system
+    simulation_system = energy_landscapes.coupled_4well_2d_system
 
     #general parameters
     n_replicates = 3
@@ -44,16 +46,18 @@ def multiplot_main_variable_WE():
     kB = 1
     T=1
 
+    #for the time being stick with 1D CVs
+    #used for both WE and MTD, but in principle they could use different CVs
+    CV = collective_variables.cv_coord0_2d_coord_1d_cv
+
+    macro_FE = collective_variable_analysis.macrostate_delta_g(simulation_system, CV, collective_variables.macrostate_classifier_cv0_eq0, kB*T)
+
     #timescales
     dt=0.001
     
     n_gpus = 32
     t_wall = 200
     max_t_molecular = t_wall
-
-    #for the time being stick with 1D CVs
-    #used for both WE and MTD, but in principle they could use different CVs
-    CV = collective_variables.cv_coord0_2d_coord_1d_cv
 
     #MTD parameters
     #TODO look at the original well-tempered MTD paper and what it says about how to set parameters, specifically delta T
@@ -250,7 +254,8 @@ def multiplot_main_variable_WE():
     #                 plottitle = "Macrostate delta G for variable WE interval", 
     #                 true_value = 0)
 
-    serial = "12" #"no_msm_reweighting_of_WE"
+
+    serial = "4well_v1" #"no_msm_reweighting_of_WE"
 
     #plot results
     make_figures.multiplot_observable_convergence(observables_all_crt = conditions_replicate_time, 
@@ -259,7 +264,7 @@ def multiplot_main_variable_WE():
                     time_axis_label = "molecular time", 
                     savetitle = f"Macrostate delta G for variable WE interval molecular time v{serial}",
                     plottitle = f"$\\Delta G_{{mac}}(t_{{WE}})$ vs $t_{{mol}}$", # \n $V_{{inherit}}=${v_inherit}
-                    true_value = 0,
+                    true_value = macro_FE,
                     we_round_lengths = [t_we, t_we*max_we_rounds], 
                     plot_we_boundaries=False)
 
@@ -270,7 +275,7 @@ def multiplot_main_variable_WE():
                     time_axis_label = "aggregate time",
                     savetitle = f"Macrostate delta G for variable WE interval aggregate time v{serial}", 
                     plottitle = f"$\\Delta G_{{mac}}(t_{{WE}})$ vs $t_{{agg}}$", # \n $V_{{inherit}}=${v_inherit}
-                    true_value = 0,
+                    true_value = macro_FE,
                     we_round_lengths = [t_we, t_we*max_we_rounds])
 
 

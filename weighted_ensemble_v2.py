@@ -32,6 +32,10 @@ def null_resample(w, b, walkerdata_transposed, walkers_per_bin):
 
 ###################################################################################################
 #                                      RESAMPLER
+#TODO: write a version which resamples without replacement to merge, 
+# resamples without replacement repeatedly to split while preserving diversity, 
+# and does not resample if neither splitting nor merging is needed
+# this variant should still distribute equal weight to all walkers.
 
 #based on Aristoff et al 2023. 'Weighted ensemble, recent mathematical developments"
 def resample(w, b, walkerdata_transposed, walkers_per_bin):
@@ -123,7 +127,7 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
     #whether MTD potential is being deposited on the current round
     deposit = 0
 
-    test_msm_reweight = False
+    test_msm_reweight = True
 
     for r in range(nrounds):
         # print(r)
@@ -207,9 +211,16 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
             else:
                 mtd_flag = "+MTD"
 
-            dist_title = f"WE{mtd_flag}_walker_distribution{msm_flag}"
-            weight_title_1 = f"WE{mtd_flag}_weight_distribution_part_1{msm_flag}"
-            weight_title_2 = f"WE{mtd_flag}_weight_distribution_part_2{msm_flag}"
+            saveplot = False
+
+            if saveplot:
+                dist_title = f"WE{mtd_flag}_walker_distribution{msm_flag}"
+                weight_title_1 = f"WE{mtd_flag}_weight_distribution_part_1{msm_flag}"
+                weight_title_2 = f"WE{mtd_flag}_weight_distribution_part_2{msm_flag}"
+            else:
+                dist_title = ""
+                weight_title_1 = ""
+                weight_title_2 = ""
 
             visualization.plot_masked_energies(data=bin_pops[0:rmax].transpose(), xlims=[0,rmax], ylims=[0,config_binner.n_bins], plot_shape=[16,8], aspect_ratio=10/4, vmax=10, labels=["WE round", "bin"], savefn=dist_title)
             #weight distribution

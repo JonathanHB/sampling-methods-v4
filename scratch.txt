@@ -59,6 +59,8 @@ Do some lit review of all this
 
 Low priority
 
+16. When we reweight can we also adjust the weights to account for the gaussians being deposited or would this require prophetic knowledge of the partition function? (or does the MSM provide our estimate of this?)
+
 17. look into whether WE enables faster gaussian deposition because having more smaller gaussians makes the deposited potential smoother
 
 20.1. write a plotter to show FE estimate evolution over time and some WE diagnostics like the bin population probability

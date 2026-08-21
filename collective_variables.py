@@ -67,9 +67,24 @@ cv_coord01_2d_coord_2d_cv = collective_variable(
     n_cv_dim = 2
 )
 
-# #macrostate classifiers
-# def macrostate_classifier_1dcv_0boundary(cv):
-#     return np.where(cv[:,0] > 0, 1, 0)
+
+#CV that is just the microscopic coordinate
+
+def cv_null(x):
+    return x
+
+#this is not the correct gradient but I don't actually need it
+def grad_null(x):
+    out = np.zeros((x.shape[0], x.shape[1], x.shape[1]))
+    
+cv_null_2d = collective_variable(
+    cv_funct = cv_null,
+    cv_grad_funct= grad_null,
+    cv_min=np.array([-3.0, -3.0]),
+    cv_max=np.array([3.0, 3.0]),
+    grid_n = 81,
+    n_cv_dim = 2
+)
 
 
 #coord macrostate classifier
@@ -77,3 +92,11 @@ cv_coord01_2d_coord_2d_cv = collective_variable(
 #so it does not need another colon :
 def macrostate_classifier_coord0_eq0(coords):
     return np.where(coords[:,0] > 0.0, 1, 0)
+
+def macrostate_classifier_cv0_eq0(cvs):
+    return np.where(cvs[:,0] > 0.0, 1, 0)
+
+def macrostate_classifier_cv01_eq0(cvs):
+    return 2*np.where(cvs[:,0] > 0.0, 1, 0) + np.where(cvs[:,1] > 0.0, 1, 0)
+
+

@@ -86,7 +86,7 @@ def multiplot_observable_convergence(observables_all_crt, condition_names, timep
 
             #set axis limits
             ax[i].set_xlim(0, max(timepoints_all_crt.flatten())) #use overall maximum time
-            ax[i].set_ylim(-20,2)
+            ax[i].set_ylim(-20,10)
 
     #overall plot labels and scaling
     plt.subplots_adjust(hspace=0.13, wspace=0.1, top=0.6, bottom=0, left=0, right=0.8)

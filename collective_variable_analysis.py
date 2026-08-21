@@ -128,4 +128,57 @@ def free_energy_on_cv_grid(
 
 
 
-#def macrostate_delta_g(landscape, cv, macrostate_classifier):
+def macrostate_delta_g(sim_system, CV, macrostate_classifier, kT):
+
+    cv_grid, free_energy_grid = free_energy_on_cv_grid(
+        free_energy_fn=sim_system.G,
+        coord_min=sim_system.coord_min,
+        coord_max=sim_system.coord_max,
+        n_micro_grid=sim_system.grid_n,
+        cv_fn=CV.cv_funct,
+        cv_min=CV.cv_min,
+        cv_max=CV.cv_max,
+        n_cv_grid=CV.grid_n,
+        kT = kT
+    )
+
+    Z = np.sum(np.exp(-free_energy_grid/kT))
+
+    mac0_energies = free_energy_grid[np.where(macrostate_classifier(cv_grid)==0)]
+    Z0 = np.sum(np.exp(-mac0_energies/kT))
+
+    mac1_energies = free_energy_grid[np.where(macrostate_classifier(cv_grid)==1)]
+    Z1 = np.sum(np.exp(-mac1_energies/kT))
+
+    delta_G_01 = -kT*np.log(Z0/Z1)
+
+    return delta_G_01
+
+
+def macrostate_delta_g_v2(sim_system, CV, macrostate_classifier, kT):
+
+    cv_grid, free_energy_grid = free_energy_on_cv_grid(
+        free_energy_fn=sim_system.G,
+        coord_min=sim_system.coord_min,
+        coord_max=sim_system.coord_max,
+        n_micro_grid=sim_system.grid_n,
+        cv_fn=CV.cv_funct,
+        cv_min=CV.cv_min,
+        cv_max=CV.cv_max,
+        n_cv_grid=CV.grid_n,
+        kT = kT
+    )
+
+    Z = np.sum(np.exp(-free_energy_grid/kT))
+
+    macrostate_assignments = macrostate_classifier(cv_grid)
+
+    mac_fe = np.zeros(len(np.unique(macrostate_assignments)))
+
+    for i, mi in enumerate(np.unique(macrostate_assignments)):
+
+        mac_energies = free_energy_grid[np.where(macrostate_assignments==i)]
+        Gi = -kT*np.log(np.sum(np.exp(-mac_energies/kT)))
+        mac_fe[mi] = Gi
+
+    return mac_fe
