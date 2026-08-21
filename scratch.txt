@@ -49,14 +49,18 @@ To do list
 18. figure out what the diffusion coefficient means in the case of uniform diffusion coefficients and 1d CVs (it appears that it may be equivalent to changing the timestep in that case)
 19. rewrite test_free_energy_on_cv_grid() in test_propagators_grid.py to use an analytically solvable case instead of another implementation of the same calculation
 
+20. write a macrostate free energy difference calculator to get the true value for systems where it's not known by symmetry
+- can use existing FE(CV) calculator for macrostates defined as f(CV)
+
+21. Is the key issue in pushing the system too hard that the potential gets too high and you end up wandering in newly-accessible [high-dimensional] spaces
+For transporters are the ortho dof rougher at the CV ends with well packed end states, but the ortho DOF of the lowest energy C substate does not map to the lowest energy M substate?
+We can make a test system and find out
+Do some lit review of all this
+
+Low priority
+
 17. look into whether WE enables faster gaussian deposition because having more smaller gaussians makes the deposited potential smoother
 
 20.1. write a plotter to show FE estimate evolution over time and some WE diagnostics like the bin population probability
 20.2: add code to plot FE landscapes for each replicate at the last frame (within t_wall)
-
-21. write a macrostate free energy difference calculator to get the true value for systems where it's not known by symmetry
-
-Low priority
-
-
 
