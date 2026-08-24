@@ -150,6 +150,7 @@ def macrostate_delta_g(sim_system, CV, macrostate_classifier, kT):
     mac1_energies = free_energy_grid[np.where(macrostate_classifier(cv_grid)==1)]
     Z1 = np.sum(np.exp(-mac1_energies/kT))
 
+    #TODO what sign convention do we want to use (or rather in what direction is delta G defined)?
     delta_G_01 = -kT*np.log(Z0/Z1)
 
     return delta_G_01
