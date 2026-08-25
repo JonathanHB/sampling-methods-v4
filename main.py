@@ -56,7 +56,7 @@ def multiplot_main_variable_WE():
     dt=0.001
     
     n_gpus = 32
-    t_wall = 200
+    t_wall = 600#200
     max_t_molecular = t_wall
 
     #MTD parameters
@@ -120,10 +120,10 @@ def multiplot_main_variable_WE():
 
 
     simulator_objects = []
-    for i in range(4):
+    for i in range(1):
 
         #WE+MTD
-        if i == 0:
+        if i == 1:
             mtd_params = {'dt': dt, 
                         'n_steps_per_frame': n_steps_per_frame, 
                         'n_frames_per_gaussian': n_frames_per_we_gaussian, 
@@ -144,7 +144,7 @@ def multiplot_main_variable_WE():
 
             
         #MTD
-        elif i == 1:
+        elif i == 0:
             mtd_params = {'dt': dt, 
                         'n_steps_per_frame': n_steps_per_frame, 
                         'n_frames_per_gaussian': n_frames_per_gaussian, 
@@ -259,7 +259,7 @@ def multiplot_main_variable_WE():
 
     #plot results
     make_figures.multiplot_observable_convergence(observables_all_crt = conditions_replicate_time, 
-                    condition_names = ["WE+MTD", "MTD", "WE", "unbiased"],#[f'$t_{{WE}}$={t_we_i:.2f}' for t_we_i in [t_we]], 
+                    condition_names = ["MTD", "WE+MTD", "WE", "unbiased"], #[f'$t_{{WE}}$={t_we_i:.2f}' for t_we_i in [t_we]], 
                     timepoints_all_crt = timepoints, 
                     time_axis_label = "molecular time", 
                     savetitle = f"Macrostate delta G for variable WE interval molecular time v{serial}",
@@ -270,7 +270,7 @@ def multiplot_main_variable_WE():
 
     #plot results
     make_figures.multiplot_observable_convergence(observables_all_crt = conditions_replicate_time2, 
-                    condition_names = ["WE+MTD", "MTD", "WE", "unbiased"], #[f'$t_{{WE}}$={t_we_i:.2f}' for t_we_i in [t_we]], 
+                    condition_names = ["MTD", "WE+MTD", "WE", "unbiased"], #[f'$t_{{WE}}$={t_we_i:.2f}' for t_we_i in [t_we]], 
                     timepoints_all_crt = timepoints2, 
                     time_axis_label = "aggregate time",
                     savetitle = f"Macrostate delta G for variable WE interval aggregate time v{serial}", 

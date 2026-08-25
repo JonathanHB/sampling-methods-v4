@@ -64,10 +64,24 @@ decoupled_4well_2d_system = energy_landscape(
 
 
 def G_4w_2d_coupled(x):
-    return (x[:, 0]**2 - 3)**2 + (x[:, 1]**2 - 3)**2 + x[:, 0] - x[:, 0]*x[:, 1]
+    return (x[:, 0]**2 - 3)**2 + 0.7*(x[:, 1]**2 - 3)**2 + x[:, 0] - x[:, 0]*x[:, 1]
 
 coupled_4well_2d_system = energy_landscape(
     G = G_4w_2d_coupled,
+    coord_min = np.array([-3,-3]),
+    coord_max = np.array([3,3]),
+    grid_n = 81,
+    n_dim = 2,
+    xi = 1
+
+)
+
+
+def G_4w_2d_unfoldable(x):
+    return 0.5*(np.exp(-x[:, 1]/2)+1)*(x[:, 0]**2 - 3)**2 + 0.5*(np.exp(x[:, 0]/2)+1)*(x[:, 1]**2 - 3)**2 - x[:, 0]*x[:, 1] # + x[:, 0] + x[:, 1] 
+
+unfoldable_4well_2d_system = energy_landscape(
+    G = G_4w_2d_unfoldable,
     coord_min = np.array([-3,-3]),
     coord_max = np.array([3,3]),
     grid_n = 81,
