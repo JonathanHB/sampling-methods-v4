@@ -36,7 +36,9 @@ def multiplot_main_variable_WE():
     #specify system
     #simulation_system = energy_landscapes.diagonal_2well_2d_system
     #simulation_system = energy_landscapes.cv0_2well_2d_system
-    simulation_system = energy_landscapes.coupled_4well_2d_system
+    #simulation_system = energy_landscapes.coupled_4well_2d_system
+    simulation_system = energy_landscapes.unfoldable_4well_2d_system
+
 
     #general parameters
     n_replicates = 3
@@ -56,7 +58,7 @@ def multiplot_main_variable_WE():
     dt=0.001
     
     n_gpus = 32
-    t_wall = 600#200
+    t_wall = 200
     max_t_molecular = t_wall
 
     #MTD parameters

@@ -121,7 +121,7 @@ def set_mtd_params_from_unbiased_literature_advice(simulation_system, kB, T, CV,
 
     #MTD params
     delta_T=dG_ts/kB - T
-    omega = 1 #0.1*np.sqrt(np.e)
+    omega = 0.1 #1 #0.1*np.sqrt(np.e)
     tau = np.max(taus)
     t_gaussian=tau
 
