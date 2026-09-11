@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import collective_variable_analysis
+import visualization
 
 
 #TODO write a variant of this that works by actual time stamp instead of WE round
@@ -181,6 +182,11 @@ def importance_sampling_fe_by_molecular_timepoint(trj, mtd_weights, we_weights, 
 
         delta_G[tp] = -np.log((1-pop_state_A)/pop_state_A)
 
+        if tp%10 == 0:
+            #nbins = 60
+            coord_hist = np.histogram2d(coords_cumulative[:,0], coords_cumulative[:,1], bins=60, range=[[-3,3],[-3,3]])
+            visualization.plot_masked_energies(data=coord_hist[0].transpose(), xlims=[-3,3], ylims=[-3,3], plot_shape=[8,8], aspect_ratio=1, vmax=len(coords_cumulative)/100, labels=["x0", "x1"], savefn=f"molecular_timepoint_{tp}.png")
+        
 
     # print("-----------------------------------")
     i_max = 0
@@ -284,10 +290,10 @@ def importance_sampling_fe_by_aggregate_timepoint(trj, mtd_weights, we_weights, 
 
 
     n_datapoints = 0
-    for i in range(1,n_timepoints+1):
+    for tp in range(1,n_timepoints+1):
 
         if last_half:
-            init_tp = int(i/2)*aggregate_time_increment
+            init_tp = int(tp/2)*aggregate_time_increment
         else:
             init_tp = 0
 
@@ -296,15 +302,21 @@ def importance_sampling_fe_by_aggregate_timepoint(trj, mtd_weights, we_weights, 
         # importance_weights_flattened = np.multiply(mtd_weights[0:i*aggregate_time_increment], we_weights[0:i*aggregate_time_increment, np.newaxis]).flatten()
         # n_datapoints += len(importance_weights_flattened)
         #print(len(trj_flattened), i*aggregate_time_increment)
-        pop_state_A = importance_sampling_estimator(trj_flattened[init_tp:i*aggregate_time_increment], importance_weights_flattened[init_tp:i*aggregate_time_increment], macrostate_classifier)
+        pop_state_A = importance_sampling_estimator(trj_flattened[init_tp:tp*aggregate_time_increment], importance_weights_flattened[init_tp:tp*aggregate_time_increment], macrostate_classifier)
 
-        if len(trj_flattened) >= i*aggregate_time_increment:
-            delta_G[i-1] = -np.log((1-pop_state_A)/pop_state_A)
+        if len(trj_flattened) >= tp*aggregate_time_increment:
+            delta_G[tp-1] = -np.log((1-pop_state_A)/pop_state_A)
             n_datapoints += aggregate_time_increment
         else:
-            delta_G[i-1] = -np.inf
+            delta_G[tp-1] = -np.inf
             # if n_datapoints == -1:
             #     n_datapoints = (i-1)*aggregate_time_increment
+
+        if tp%10 == 0:
+            #nbins = 60
+            coord_hist = np.histogram2d(trj_flattened[init_tp:tp*aggregate_time_increment,0], trj_flattened[init_tp:tp*aggregate_time_increment,1], bins=60, range=[[-3,3],[-3,3]])
+            visualization.plot_masked_energies(data=coord_hist[0].transpose(), xlims=[-3,3], ylims=[-3,3], plot_shape=[8,8], aspect_ratio=1, vmax=len(trj_flattened[init_tp:tp*aggregate_time_increment])/100, labels=["x0", "x1"], savefn=f"aggregate_timepoint_{tp}.png")
+    
 
     print(f"used {n_datapoints} datapoints")
 

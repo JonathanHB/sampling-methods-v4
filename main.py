@@ -41,7 +41,7 @@ def multiplot_main_variable_WE():
 
 
     #general parameters
-    n_replicates = 3
+    n_replicates = 1
     n_timepoints = 100
     v_inherit=True
 
@@ -121,7 +121,7 @@ def multiplot_main_variable_WE():
 
 
     simulator_objects = []
-    for i in range(4):
+    for i in range(3):
 
         #WE+MTD
         if i == 1:
@@ -256,7 +256,7 @@ def multiplot_main_variable_WE():
     #                 true_value = 0)
 
 
-    serial = "4well_v2_5reps_latter_half_or_all_of_data_metarep3"
+    serial = ""#4well_v2_5reps_latter_half_or_all_of_data_metarep3"
 
     #plot results
     make_figures.multiplot_observable_convergence(observables_all_crt = conditions_replicate_time, 

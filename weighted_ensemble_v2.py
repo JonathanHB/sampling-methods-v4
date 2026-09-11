@@ -235,6 +235,9 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
             #plt.title(f"WE{mtd_flag}_walker_distribution{msm_flag}")
             plt.show()
 
+            # plt.hist2d(x_md[:,0], x_md[:,1], bins=60, range=[[-3,3],[-3,3]], cmap="viridis")
+            # plt.show()
+
             # import sys
             # sys.exit(0)
 
@@ -262,12 +265,15 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
             plt.ylabel("x1")
             #plt.title(f"WE{mtd_flag}_walker_distribution{msm_flag}")
             plt.show()
-        #     plt.hist(w, bins=100, alpha = 0.3, range = (0,0.25))
-        #     plt.show()
-        #     # print(x_md)
-        #     # print(x)
-        #     plt.hist((x_md-x)[:,0], bins=16, range = (-0.2,0.2))
-        #     plt.show()
+            #     plt.hist(w, bins=100, alpha = 0.3, range = (0,0.25))
+            #     plt.show()
+            #     # print(x_md)
+            #     # print(x)
+            #     plt.hist((x_md-x)[:,0], bins=16, range = (-0.2,0.2))
+            #     plt.show()
+
+            # plt.hist2d(x_md[:,0], x_md[:,1], bins=60, range=[[-3,3],[-3,3]], cmap="viridis")
+            # plt.show()
 
         w_max.append(max(w)) #these diagnostics belong in the observables
 
