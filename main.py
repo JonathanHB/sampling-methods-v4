@@ -37,7 +37,7 @@ def multiplot_main_variable_WE():
     #simulation_system = energy_landscapes.diagonal_2well_2d_system
     #simulation_system = energy_landscapes.cv0_2well_2d_system
     #simulation_system = energy_landscapes.coupled_4well_2d_system
-    simulation_system = energy_landscapes.unfoldable_4well_2d_system
+    simulation_system = energy_landscapes.coupled_4well_2d_system
 
 
     #general parameters
@@ -56,9 +56,8 @@ def multiplot_main_variable_WE():
 
     #timescales
     dt=0.001
-    
     n_gpus = 32
-    t_wall = 200
+    t_wall = 400
     max_t_molecular = t_wall
 
     #MTD parameters
@@ -122,7 +121,7 @@ def multiplot_main_variable_WE():
 
 
     simulator_objects = []
-    for i in range(1):
+    for i in range(4):
 
         #WE+MTD
         if i == 1:
@@ -257,15 +256,15 @@ def multiplot_main_variable_WE():
     #                 true_value = 0)
 
 
-    serial = "4well_v1" #"no_msm_reweighting_of_WE"
+    serial = "4well_v2_5reps_latter_half_or_all_of_data_metarep3"
 
     #plot results
     make_figures.multiplot_observable_convergence(observables_all_crt = conditions_replicate_time, 
                     condition_names = ["MTD", "WE+MTD", "WE", "unbiased"], #[f'$t_{{WE}}$={t_we_i:.2f}' for t_we_i in [t_we]], 
                     timepoints_all_crt = timepoints, 
-                    time_axis_label = "molecular time", 
+                    time_axis_label = "molecular time\n=wall clock time if renting compute", 
                     savetitle = f"Macrostate delta G for variable WE interval molecular time v{serial}",
-                    plottitle = f"$\\Delta G_{{mac}}(t_{{WE}})$ vs $t_{{mol}}$", # \n $V_{{inherit}}=${v_inherit}
+                    plottitle = f"$\\Delta G_{{mac}}$ vs $t_{{mol}}$", # \n $V_{{inherit}}=${v_inherit}
                     true_value = macro_FE,
                     we_round_lengths = [t_we, t_we*max_we_rounds], 
                     plot_we_boundaries=False)
@@ -274,9 +273,9 @@ def multiplot_main_variable_WE():
     make_figures.multiplot_observable_convergence(observables_all_crt = conditions_replicate_time2, 
                     condition_names = ["MTD", "WE+MTD", "WE", "unbiased"], #[f'$t_{{WE}}$={t_we_i:.2f}' for t_we_i in [t_we]], 
                     timepoints_all_crt = timepoints2, 
-                    time_axis_label = "aggregate time",
+                    time_axis_label = "aggregate time\n=wall clock time on lab cluster",
                     savetitle = f"Macrostate delta G for variable WE interval aggregate time v{serial}", 
-                    plottitle = f"$\\Delta G_{{mac}}(t_{{WE}})$ vs $t_{{agg}}$", # \n $V_{{inherit}}=${v_inherit}
+                    plottitle = f"$\\Delta G_{{mac}}$ vs $t_{{agg}}$", # \n $V_{{inherit}}=${v_inherit}
                     true_value = macro_FE,
                     we_round_lengths = [t_we, t_we*max_we_rounds])
 
@@ -326,6 +325,7 @@ def run_macrostate_dg_molecular_time(simulator_objects, n_replicates, macrostate
     # timepoints = np.nan*np.ones([len(simulator_objects), n_replicates, max_we_rounds])
 
     for si, s in enumerate(simulator_objects):
+        
         print(f"-- running condition {si+1} of {len(simulator_objects)}")
         print(f"with n_gaussians_per_round = {s.we_params['n_gaussians_per_round']}")
         #print(f"with n_we_rounds = {s.we_params['n_we_rounds']}")
@@ -342,14 +342,22 @@ def run_macrostate_dg_molecular_time(simulator_objects, n_replicates, macrostate
             # observables_all_crt[si,ri,:s.we_params['n_we_rounds']] = fe_by_round
             # timepoints[si,ri,:s.we_params['n_we_rounds']] = [wer*s.we_round_length for wer in range(1,s.we_params['n_we_rounds']+1)]
 
-            fe_by_mol_timepoint = estimate_observables.importance_sampling_fe_by_molecular_timepoint(we_observables[0], we_observables[1], we_observables[2], macrostate_classifier, sim_system=s.energy_landscape, CV=s.we_params["CV"], kT=s.kB*s.T, n_timepoints=n_timepoints, max_n_frames=max_n_frames)
+            if s.we_params['max_we_rounds'] == 1:
+                last_half = True
+            else:
+                last_half = False
+
+            fe_by_mol_timepoint = estimate_observables.importance_sampling_fe_by_molecular_timepoint(we_observables[0], we_observables[1], we_observables[2], macrostate_classifier, sim_system=s.energy_landscape, CV=s.we_params["CV"], kT=s.kB*s.T, n_timepoints=n_timepoints, max_n_frames=max_n_frames, last_half=last_half)
             observables_all_crt[si,ri] = fe_by_mol_timepoint
             timepoints[si,ri] = [s.we_params['t_wall'] * (ti+1)/n_timepoints for ti in range(n_timepoints)]
 
-            fe_by_agg_timepoint = estimate_observables.importance_sampling_fe_by_aggregate_timepoint(we_observables[0], we_observables[1], we_observables[2], macrostate_classifier, sim_system=s.energy_landscape, CV=s.we_params["CV"], kT=s.kB*s.T, n_timepoints=n_timepoints, aggregate_time_increment=aggregate_time_increment)
+            fe_by_agg_timepoint = estimate_observables.importance_sampling_fe_by_aggregate_timepoint(we_observables[0], we_observables[1], we_observables[2], macrostate_classifier, sim_system=s.energy_landscape, CV=s.we_params["CV"], kT=s.kB*s.T, n_timepoints=n_timepoints, aggregate_time_increment=aggregate_time_increment, last_half=last_half)
             observables_all_crt2[si,ri] = fe_by_agg_timepoint
             timepoints2[si,ri] = [s.mtd_params['dt']*s.mtd_params['n_steps_per_frame'] * aggregate_time_increment*(ti+1) for ti in range(n_timepoints)]
 
             #timepoints[si,ri] = [s.we_params['n_we_rounds']*s.we_round_length * (ti+1)/n_timepoints for ti in range(n_timepoints)]
+
+        #show any plots accumulated over all replicates for the current condition
+        plt.show()
 
     return observables_all_crt, timepoints, observables_all_crt2, timepoints2, "WE rounds"

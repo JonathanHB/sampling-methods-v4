@@ -227,6 +227,14 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
             visualization.plot_masked_energies(data=bin_we_weights[0:rmax].transpose(), xlims=[0,rmax], ylims=[0,config_binner.n_bins], plot_shape=[16,8], aspect_ratio=10/4, vmax=0.1, labels=["WE round", "bin"], savefn=weight_title_1)
             visualization.plot_masked_energies(data=bin_we_weights[rmax:2*rmax].transpose(), xlims=[rmax,2*rmax], ylims=[0,config_binner.n_bins], plot_shape=[16,8], aspect_ratio=10/4, vmax=0.1, labels=["WE round", "bin"], savefn=weight_title_2)
 
+            plt.plot(propagator.mtd_grid())
+            plt.show()
+            plt.scatter(x_md[:,0], x_md[:,1], c=w, s=10, alpha = 0.5)
+            plt.xlabel("x0")
+            plt.ylabel("x1")
+            #plt.title(f"WE{mtd_flag}_walker_distribution{msm_flag}")
+            plt.show()
+
             # import sys
             # sys.exit(0)
 
@@ -246,8 +254,14 @@ def weighted_ensemble(x, e, w, cb, b, propagator, resampler, config_binner, ense
 
             break
 
-        if r % 500 == 0:
+        if r % 10000 == 0:
             plt.plot(propagator.mtd_grid())
+            plt.show()
+            plt.scatter(x_md[:,0], x_md[:,1], c=w, s=10, alpha = 0.5)
+            plt.xlabel("x0")
+            plt.ylabel("x1")
+            #plt.title(f"WE{mtd_flag}_walker_distribution{msm_flag}")
+            plt.show()
         #     plt.hist(w, bins=100, alpha = 0.3, range = (0,0.25))
         #     plt.show()
         #     # print(x_md)

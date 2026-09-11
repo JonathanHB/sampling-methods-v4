@@ -59,9 +59,10 @@ def importance_sampling_fe_by_we_round(trj, mtd_weights, we_weights, macrostate_
         trj_flattened_by_we_round[we_i] = trj_r.reshape(-1, trj_r.shape[-1])
         importance_weights_flattened_by_we_round[we_i] = np.multiply(mtd_weights_r, we_weights_r[:, np.newaxis]).flatten()
 
+        init_round = 0
         #calculate the cumulative deltaG up to this point
-        coords_cumulative = np.concatenate(trj_flattened_by_we_round[:we_i+1])
-        importance_weights_cumulative = np.concatenate(importance_weights_flattened_by_we_round[:we_i+1])
+        coords_cumulative = np.concatenate(trj_flattened_by_we_round[init_round:we_i+1])
+        importance_weights_cumulative = np.concatenate(importance_weights_flattened_by_we_round[init_round:we_i+1])
 
         pop_state_A = importance_sampling_estimator(coords_cumulative, importance_weights_cumulative, macrostate_classifier)
 
@@ -75,7 +76,7 @@ def importance_sampling_fe_by_we_round(trj, mtd_weights, we_weights, macrostate_
 
 
 
-def importance_sampling_fe_by_molecular_timepoint(trj, mtd_weights, we_weights, macrostate_classifier, CV, sim_system, kT, n_timepoints, max_n_frames):
+def importance_sampling_fe_by_molecular_timepoint(trj, mtd_weights, we_weights, macrostate_classifier, CV, sim_system, kT, n_timepoints, max_n_frames, last_half=False):
     """
     Calculate the importance sampling estimate of a macrostate free energy difference 
     via the importance sampling estimate of equilibrium populations.
@@ -168,9 +169,13 @@ def importance_sampling_fe_by_molecular_timepoint(trj, mtd_weights, we_weights, 
         trj_flattened_by_timepoint[tp] = np.concatenate(trj_flattened_by_timepoint[tp])
         importance_weights_flattened_by_timepoint[tp] = np.concatenate(importance_weights_flattened_by_timepoint[tp])
 
+        if last_half:
+            init_tp = int(tp/2)
+        else:
+            init_tp = 0
         #calculate the cumulative deltaG up to this point
-        coords_cumulative = np.concatenate(trj_flattened_by_timepoint[:tp+1])
-        importance_weights_cumulative = np.concatenate(importance_weights_flattened_by_timepoint[:tp+1])
+        coords_cumulative = np.concatenate(trj_flattened_by_timepoint[init_tp:tp+1])
+        importance_weights_cumulative = np.concatenate(importance_weights_flattened_by_timepoint[init_tp:tp+1])
 
         pop_state_A = importance_sampling_estimator(coords_cumulative, importance_weights_cumulative, macrostate_classifier)
 
@@ -202,7 +207,7 @@ def importance_sampling_fe_by_molecular_timepoint(trj, mtd_weights, we_weights, 
 
 
 
-def importance_sampling_fe_by_aggregate_timepoint(trj, mtd_weights, we_weights, macrostate_classifier, CV, sim_system, kT, n_timepoints, aggregate_time_increment):
+def importance_sampling_fe_by_aggregate_timepoint(trj, mtd_weights, we_weights, macrostate_classifier, CV, sim_system, kT, n_timepoints, aggregate_time_increment, last_half=False):
     """
     Calculate the importance sampling estimate of a macrostate free energy difference 
     via the importance sampling estimate of equilibrium populations.
@@ -277,15 +282,21 @@ def importance_sampling_fe_by_aggregate_timepoint(trj, mtd_weights, we_weights, 
     importance_weights_flattened = np.concatenate(importance_weights_flattened_by_we_round)
 
 
+
     n_datapoints = 0
     for i in range(1,n_timepoints+1):
+
+        if last_half:
+            init_tp = int(i/2)*aggregate_time_increment
+        else:
+            init_tp = 0
 
         # trj_r = agg_trj[0:i*aggregate_time_increment]
         # trj_flattened = trj_r.reshape(-1, trj_r.shape[-1])
         # importance_weights_flattened = np.multiply(mtd_weights[0:i*aggregate_time_increment], we_weights[0:i*aggregate_time_increment, np.newaxis]).flatten()
         # n_datapoints += len(importance_weights_flattened)
         #print(len(trj_flattened), i*aggregate_time_increment)
-        pop_state_A = importance_sampling_estimator(trj_flattened[0:i*aggregate_time_increment], importance_weights_flattened[0:i*aggregate_time_increment], macrostate_classifier)
+        pop_state_A = importance_sampling_estimator(trj_flattened[init_tp:i*aggregate_time_increment], importance_weights_flattened[init_tp:i*aggregate_time_increment], macrostate_classifier)
 
         if len(trj_flattened) >= i*aggregate_time_increment:
             delta_G[i-1] = -np.log((1-pop_state_A)/pop_state_A)
@@ -302,7 +313,6 @@ def importance_sampling_fe_by_aggregate_timepoint(trj, mtd_weights, we_weights, 
     # importance_weights_flattened = [np.multiply(mtd_weights[0:n_timepoints*aggregate_time_increment], we_weights[0:n_timepoints*aggregate_time_increment, np.newaxis]).flatten()]
 
     #plot_landscape(sim_system, CV, kT, trj_flattened[0:n_timepoints*aggregate_time_increment], importance_weights_flattened[0:n_timepoints*aggregate_time_increment])
-
 
     return delta_G
 
@@ -340,6 +350,7 @@ def importance_sampling_estimator(coords, importance_weights, observable):
     observable_estimate = np.dot(observable_values, importance_weights)/np.sum(importance_weights)
 
     return observable_estimate
+
 
 
 def plot_landscape(sim_system, CV, kT, coords_cumulative, importance_weights_cumulative):
