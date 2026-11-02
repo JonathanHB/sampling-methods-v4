@@ -41,7 +41,7 @@ def multiplot_main_variable_WE():
 
 
     #general parameters
-    n_replicates = 1
+    n_replicates = 3
     n_timepoints = 100
     v_inherit=True
 
